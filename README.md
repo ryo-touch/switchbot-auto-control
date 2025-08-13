@@ -119,4 +119,4 @@ MIT License
 
 ---
 
-詳細な実装仕様については、[PWA実装仕様書](docs/PWA実装仕様書%20-%20SwitchBot位置情報自動制御システム.md)を参照してください。
+詳細な実装仕様については、[PWA実装仕様書](docs/PWA-Implementation-Specification.md)を参照してください。
