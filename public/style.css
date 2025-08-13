@@ -306,6 +306,34 @@ body {
     font-size: 16px;
 }
 
+.setting-item input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.setting-item input[readonly] {
+    background-color: #f8f8f8;
+    color: #8e8e93;
+    cursor: not-allowed;
+}
+
+.setting-info {
+    margin-bottom: 20px;
+}
+
+.readonly-notice {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ffeaa7;
+    margin: 0;
+    font-size: 14px;
+}
+
 .setting-item input[type="checkbox"] {
     width: 20px;
     height: 20px;

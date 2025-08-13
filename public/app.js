@@ -17,7 +17,8 @@ const DEFAULT_SETTINGS = {
 const API_ENDPOINTS = {
     locationCheck: '/api/location-check',
     devices: '/api/devices',
-    testAircon: '/api/test-aircon'
+    testAircon: '/api/test-aircon',
+    config: '/api/config'
 };
 
 // ========================================
@@ -150,8 +151,20 @@ class LocationMonitor {
      * 設定を取得
      */
     getSettings() {
+        // ローカルストレージとサーバー設定をマージ
         const savedSettings = localStorage.getItem('switchbot-settings');
-        return savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS;
+        const localSettings = savedSettings ? JSON.parse(savedSettings) : {};
+
+        // サーバー設定を優先してマージ
+        return {
+            ...DEFAULT_SETTINGS,
+            ...localSettings,
+            // サーバー管理項目は上書き
+            homeLatitude: DEFAULT_SETTINGS.homeLatitude,
+            homeLongitude: DEFAULT_SETTINGS.homeLongitude,
+            triggerDistance: DEFAULT_SETTINGS.triggerDistance,
+            debugMode: DEFAULT_SETTINGS.debugMode
+        };
     }
 }
 
@@ -162,6 +175,31 @@ class SwitchBotAPI {
     constructor() {
         this.lastCallTime = 0;
         this.minInterval = 1000; // 最小API呼び出し間隔(ms)
+    }
+
+    /**
+     * 設定情報取得
+     */
+    async getConfig() {
+        try {
+            const response = await fetch(API_ENDPOINTS.config, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+            }
+
+            const result = await response.json();
+            return result;
+
+        } catch (error) {
+            console.error('Config Error:', error);
+            throw error;
+        }
     }
 
     /**
@@ -524,6 +562,33 @@ class UIController {
     }
 
     /**
+     * サーバー設定を適用
+     */
+    applyServerConfig(config) {
+        // 設定モーダルのフィールドに値を設定
+        if (this.elements.homeLatInput) {
+            this.elements.homeLatInput.value = config.homeLocation.latitude.toFixed(6);
+        }
+        if (this.elements.homeLonInput) {
+            this.elements.homeLonInput.value = config.homeLocation.longitude.toFixed(6);
+        }
+        if (this.elements.triggerDistanceInput) {
+            this.elements.triggerDistanceInput.value = config.triggerDistance;
+        }
+        if (this.elements.debugModeInput) {
+            this.elements.debugModeInput.checked = config.debugMode;
+        }
+
+        // LocationMonitorに自宅座標を設定
+        if (window.switchBotApp?.locationMonitor) {
+            window.switchBotApp.locationMonitor.homeLocation = {
+                latitude: config.homeLocation.latitude,
+                longitude: config.homeLocation.longitude
+            };
+        }
+    }
+
+    /**
      * 通知表示
      */
     showNotification(message, type = 'info') {
@@ -641,6 +706,9 @@ class AppController {
             // ログの復元
             this.uiController.loadLogsFromStorage();
 
+            // サーバー設定を取得
+            await this.loadServerConfig();
+
             // 接続状態確認
             await this.checkConnection();
 
@@ -650,6 +718,31 @@ class AppController {
         } catch (error) {
             console.error('Initialization Error:', error);
             this.uiController.addLog(`初期化エラー: ${error.message}`);
+        }
+    }
+
+    /**
+     * サーバー設定を取得・適用
+     */
+    async loadServerConfig() {
+        try {
+            this.uiController.addLog('サーバー設定を取得中...');
+            const config = await this.switchBotAPI.getConfig();
+
+            // グローバル設定に適用
+            DEFAULT_SETTINGS.homeLatitude = config.homeLocation.latitude;
+            DEFAULT_SETTINGS.homeLongitude = config.homeLocation.longitude;
+            DEFAULT_SETTINGS.triggerDistance = config.triggerDistance;
+            DEFAULT_SETTINGS.debugMode = config.debugMode;
+
+            // UI設定に適用
+            this.uiController.applyServerConfig(config);
+
+            this.uiController.addLog('サーバー設定を適用しました');
+
+        } catch (error) {
+            console.error('Config Load Error:', error);
+            this.uiController.addLog(`設定取得エラー: ${error.message}`);
         }
     }
 
