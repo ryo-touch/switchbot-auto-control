@@ -665,28 +665,12 @@ class UIController {
         const timestamp = new Date();
         const timeStr = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
 
-        // ログエントリの内容
-        const logContent = `${timeStr} ${message}`;
-
         logEntry.innerHTML = `
             <div class="log-content">
                 <span class="log-time">${timeStr}</span>
                 <span class="log-message">${message}</span>
             </div>
-            <button class="log-copy-btn" title="ログをコピー">📋</button>
         `;
-
-        // コピーボタンのイベントリスナー
-        const copyBtn = logEntry.querySelector('.log-copy-btn');
-        copyBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.copyToClipboard(logContent);
-        });
-
-        // ログエントリ全体のクリックでもコピー
-        logEntry.addEventListener('click', () => {
-            this.copyToClipboard(logContent);
-        });
 
         this.elements.logContainer.insertBefore(logEntry, this.elements.logContainer.firstChild);
 
@@ -697,9 +681,7 @@ class UIController {
 
         // ローカルストレージに保存
         this.saveLogsToStorage();
-    }
-
-    /**
+    }    /**
      * 設定モーダル開く
      */
     openSettingsModal() {
@@ -819,28 +801,16 @@ class UIController {
                 if (timeMatch) {
                     const timeStr = timeMatch[1];
                     const message = log.substring(timeStr.length + 1); // 時刻部分と空白を除去
-
+                    
                     const logEntry = document.createElement('div');
                     logEntry.className = 'log-entry';
-
+                    
                     logEntry.innerHTML = `
                         <div class="log-content">
                             <span class="log-time">${timeStr}</span>
                             <span class="log-message">${message}</span>
                         </div>
-                        <button class="log-copy-btn" title="ログをコピー">📋</button>
                     `;
-
-                    // イベントリスナーを設定
-                    const copyBtn = logEntry.querySelector('.log-copy-btn');
-                    copyBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.copyToClipboard(log);
-                    });
-
-                    logEntry.addEventListener('click', () => {
-                        this.copyToClipboard(log);
-                    });
 
                     this.elements.logContainer.appendChild(logEntry);
                 } else {
@@ -851,26 +821,13 @@ class UIController {
                         <div class="log-content">
                             <span class="log-message">${log}</span>
                         </div>
-                        <button class="log-copy-btn" title="ログをコピー">📋</button>
                     `;
-
-                    const copyBtn = logEntry.querySelector('.log-copy-btn');
-                    copyBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.copyToClipboard(log);
-                    });
-
-                    logEntry.addEventListener('click', () => {
-                        this.copyToClipboard(log);
-                    });
 
                     this.elements.logContainer.appendChild(logEntry);
                 }
             });
         }
-    }
-
-    /**
+    }    /**
      * ログをクリア
      */
     clearLogs() {
