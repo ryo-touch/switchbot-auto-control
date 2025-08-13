@@ -667,7 +667,7 @@ class UIController {
 
         // ログエントリの内容
         const logContent = `${timeStr} ${message}`;
-        
+
         logEntry.innerHTML = `
             <div class="log-content">
                 <span class="log-time">${timeStr}</span>
@@ -819,10 +819,10 @@ class UIController {
                 if (timeMatch) {
                     const timeStr = timeMatch[1];
                     const message = log.substring(timeStr.length + 1); // 時刻部分と空白を除去
-                    
+
                     const logEntry = document.createElement('div');
                     logEntry.className = 'log-entry';
-                    
+
                     logEntry.innerHTML = `
                         <div class="log-content">
                             <span class="log-time">${timeStr}</span>
@@ -902,10 +902,10 @@ class UIController {
                 document.execCommand('copy');
                 textArea.remove();
             }
-            
+
             // コピー成功の視覚的フィードバック
             this.showCopyFeedback();
-            
+
         } catch (error) {
             console.error('コピーに失敗しました:', error);
             // エラー時は手動コピーのプロンプトを表示
@@ -939,7 +939,7 @@ class UIController {
      */
     showManualCopyPrompt(text) {
         const promptText = `以下のテキストを手動でコピーしてください:\n\n${text}`;
-        
+
         // モバイルでは短縮版、デスクトップでは詳細版
         if (window.innerWidth <= 768) {
             alert('コピーに失敗しました。テキストを長押しして手動でコピーしてください。');

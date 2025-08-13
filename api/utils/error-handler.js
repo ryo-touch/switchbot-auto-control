@@ -225,6 +225,25 @@ const COMMON_ERRORS = {
     }
 };
 
+/**
+ * エラーを処理してHTTPレスポンスを作成
+ * @param {Error} error - エラーオブジェクト
+ * @param {number} defaultStatusCode - デフォルトのHTTPステータスコード
+ * @returns {Object} Netlify Functions用レスポンス
+ */
+function handleError(error, defaultStatusCode = 500) {
+    const message = error.message || '不明なエラーが発生しました';
+    const statusCode = error.statusCode || defaultStatusCode;
+
+    // エラーログ出力
+    logError(error, {
+        statusCode,
+        timestamp: new Date().toISOString()
+    });
+
+    return createErrorResponse(statusCode, message);
+}
+
 module.exports = {
     createErrorResponse,
     createSuccessResponse,
@@ -233,5 +252,6 @@ module.exports = {
     logError,
     validateHttpMethod,
     createCorsResponse,
+    handleError,
     COMMON_ERRORS
 };
