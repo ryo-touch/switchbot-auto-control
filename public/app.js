@@ -8,7 +8,7 @@
 // ========================================
 const DEFAULT_SETTINGS = {
     triggerDistance: 100,     // トリガー距離(m)
-    updateInterval: 10,       // 位置情報取得の更新間隔(秒)
+    updateInterval: 60,       // 位置情報取得の更新間隔(秒)
     debugMode: true,         // デバッグモード
     homeLatitude: null,       // 自宅緯度
     homeLongitude: null       // 自宅経度
@@ -18,7 +18,8 @@ const API_ENDPOINTS = {
     locationCheck: '/api/location-check',
     devices: '/api/devices',
     testAircon: '/api/test-aircon',
-    config: '/api/config'
+    config: '/api/config',
+    airconSettings: '/api/aircon-settings'
 };
 
 // ========================================
@@ -497,6 +498,31 @@ class SwitchBotAPI {
     }
 
     /**
+     * エアコン設定情報を取得
+     */
+    async getAirconSettings(action = null) {
+        try {
+            let url = API_ENDPOINTS.airconSettings;
+            if (action) {
+                url += `?action=${action}`;
+            }
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+            }
+
+            const result = await response.json();
+            return result;
+
+        } catch (error) {
+            console.error('Aircon Settings Error:', error);
+            throw this.handleAPIError(error);
+        }
+    }
+
+    /**
      * レート制限対応
      */
     async waitForRateLimit() {
@@ -662,6 +688,14 @@ class UIController {
             });
         }
 
+        // エアコン設定更新ボタン
+        const refreshAirconSettingsBtn = document.getElementById('refreshAirconSettings');
+        if (refreshAirconSettingsBtn) {
+            refreshAirconSettingsBtn.addEventListener('click', () => {
+                this.loadAndDisplayAirconSettings();
+            });
+        }
+
         // モーダルの外側クリックで閉じる
         if (this.elements.settingsModal) {
             this.elements.settingsModal.addEventListener('click', (e) => {
@@ -813,6 +847,9 @@ class UIController {
         if (this.elements.homeLonInput) this.elements.homeLonInput.value = settings.homeLongitude || '';
         if (this.elements.triggerDistanceInput) this.elements.triggerDistanceInput.value = settings.triggerDistance;
         if (this.elements.debugModeInput) this.elements.debugModeInput.checked = settings.debugMode;
+
+        // エアコン設定も読み込み
+        this.loadAndDisplayAirconSettings();
 
         this.elements.settingsModal.style.display = 'flex';
     }
@@ -1050,6 +1087,56 @@ class UIController {
             .join('\n');
 
         this.copyToClipboard(allLogs);
+    }
+
+    /**
+     * エアコン設定を読み込み・表示
+     */
+    async loadAndDisplayAirconSettings() {
+        try {
+            if (!this.switchBotAPI) {
+                console.error('SwitchBot API not available');
+                return;
+            }
+
+            const settings = await this.switchBotAPI.getAirconSettings();
+            this.displayAirconSettings(settings);
+
+        } catch (error) {
+            console.error('Failed to load aircon settings:', error);
+            this.addLog(`エアコン設定取得エラー: ${error.message}`);
+        }
+    }
+
+    /**
+     * エアコン設定をUIに表示
+     */
+    displayAirconSettings(settings) {
+        const currentSeasonEl = document.getElementById('currentSeason');
+        const onTempEl = document.getElementById('onTemperature');
+        const offTempEl = document.getElementById('offTemperature');
+
+        if (currentSeasonEl) {
+            const seasonNames = {
+                spring: '春',
+                summer: '夏',
+                autumn: '秋',
+                winter: '冬'
+            };
+            currentSeasonEl.textContent = seasonNames[settings.current.season] || settings.current.season;
+        }
+
+        if (onTempEl && settings.examples.on) {
+            const onSettings = settings.examples.on.settings;
+            const modeNames = { 1: '自動', 2: '冷房', 3: '暖房', 4: '送風', 5: '除湿' };
+            onTempEl.textContent = `${onSettings.temperature}度 (${modeNames[onSettings.mode] || onSettings.mode})`;
+        }
+
+        if (offTempEl && settings.examples.off) {
+            const offSettings = settings.examples.off.settings;
+            const modeNames = { 1: '自動', 2: '冷房', 3: '暖房', 4: '送風', 5: '除湿' };
+            offTempEl.textContent = `${offSettings.temperature}度 (${modeNames[offSettings.mode] || offSettings.mode})`;
+        }
     }
 
     /**

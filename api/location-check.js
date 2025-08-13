@@ -9,6 +9,7 @@
 const { getHomeLocation, getTriggerDistance, getAirconDeviceId, createAuthHeaders, getBaseURL, isDebugMode, generateSignature } = require('./utils/switchbot-auth');
 const { calculateDistance, shouldTriggerControl, validateCoordinates, formatDistance } = require('./utils/distance-calc');
 const { createErrorResponse, createSuccessResponse, handleSwitchBotError, logError, validateHttpMethod, createCorsResponse, COMMON_ERRORS } = require('./utils/error-handler');
+const { generateAirconParameter, getAirconSettings } = require('./config/aircon-settings');
 
 /**
  * エアコンの現在状態を取得（ローカル状態管理APIを使用）
@@ -269,9 +270,12 @@ async function executeAirconOff() {
         const baseURL = getBaseURL();
         const deviceId = getAirconDeviceId();
 
+        const parameter = generateAirconParameter('off');
+        const settings = getAirconSettings('off');
+
         const commandBody = {
             command: 'setAll',
-            parameter: '26,1,1,off',  // 26度、自動モード、低風量、電源OFF
+            parameter: parameter,  // 季節別設定から動的生成
             commandType: 'command'
         };
 
@@ -363,8 +367,14 @@ async function executeAirconOff() {
                 console.log('[SUCCESS] ✅ SwitchBot API制御成功:', {
                     statusCode: data.statusCode,
                     message: data.message,
-                    commandSent: 'setAll(26,1,1,off)',
-                    parameter: '',
+                    commandSent: `setAll(${parameter})`,
+                    season: settings.season,
+                    settings: {
+                        temperature: settings.temperature,
+                        mode: settings.mode,
+                        fanSpeed: settings.fanSpeed,
+                        power: settings.power
+                    },
                     timestamp: new Date().toISOString(),
                     note: '物理デバイスの動作確認が必要'
                 });

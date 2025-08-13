@@ -8,6 +8,7 @@
 // Netlify Functions では dotenv は不要（環境変数は自動注入される）
 const { createAuthHeaders, getBaseURL, getAirconDeviceId, isDebugMode, generateSignature } = require('./utils/switchbot-auth');
 const { createErrorResponse, createSuccessResponse, handleSwitchBotError, logError, validateHttpMethod, createCorsResponse, COMMON_ERRORS } = require('./utils/error-handler');
+const { generateAirconParameter, getAirconSettings } = require('./config/aircon-settings');
 
 /**
  * 🔧 SwitchBot APIの簡易診断（Netlify対応）
@@ -234,18 +235,29 @@ async function sendAirconCommand(action = 'off') {
         // ✅ 修正: エアコンには setAll コマンドを使用
         let commandBody;
 
-        if (action === 'on') {
+        if (action === 'on' || action === 'off') {
+            const parameter = generateAirconParameter(action);
+            const settings = getAirconSettings(action);
+
             commandBody = {
                 command: 'setAll',
-                parameter: '26,2,2,on',  // 26度、冷房モード、中風量、電源ON
+                parameter: parameter,  // 季節別設定から動的生成
                 commandType: 'command'
             };
-        } else if (action === 'off') {
-            commandBody = {
-                command: 'setAll',
-                parameter: '26,1,1,off',  // 26度、自動モード、低風量、電源OFF
-                commandType: 'command'
-            };
+
+            if (isDebugMode()) {
+                console.log('[DEBUG] Aircon settings applied:', {
+                    action,
+                    season: settings.season,
+                    parameter,
+                    settings: {
+                        temperature: settings.temperature,
+                        mode: settings.mode,
+                        fanSpeed: settings.fanSpeed,
+                        power: settings.power
+                    }
+                });
+            }
         } else {
             throw new Error(`Unsupported action: ${action}`);
         }
