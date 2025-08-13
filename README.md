@@ -17,7 +17,7 @@ iPhoneが自宅から100m離れた時に、SwitchBot Hub2経由でエアコン�
 
 ## 📁 プロジェクト構成
 
-```
+```text
 /
 ├── public/           # PWAフロントエンド
 │   ├── index.html   # メインUI
@@ -93,9 +93,31 @@ npm run dev
 3. 監視開始ボタンをタップ
 4. 自宅から100m離れると自動でエアコンが停止
 
-## 🔧 開発
+## 🧪 テスト
 
-### ブランチ戦略
+### ローカルテスト
+
+```bash
+# 環境変数を設定
+cp .env.example .env
+# .envファイルを編集して実際の値を設定
+
+# APIテスト実行
+npm run test
+
+# 個別テスト
+npm run test:api
+```
+
+### Netlify Dev（推奨）
+
+```bash
+# Netlify開発環境起動
+npm run dev:api
+
+# ブラウザでアクセス
+open http://localhost:8888
+```
 
 - `main`: 本番環境用
 - `develop`: 開発統合用

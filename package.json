@@ -5,9 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "npx http-server public -p 3000",
+    "dev:api": "netlify dev",
     "build": "echo 'No build step required for static PWA'",
     "start": "npx http-server public -p 3000",
-    "test": "echo 'No tests specified'"
+    "test": "node api/test-runner.js",
+    "test:api": "cd api && node test-runner.js"
   },
   "keywords": [
     "pwa",
@@ -20,7 +22,8 @@
   "author": "ryosakai",
   "license": "MIT",
   "dependencies": {
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "http-server": "^14.1.1",

@@ -5,18 +5,61 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# API リダイレクト設定
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
+# SPA フォールバック
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["admin"]}
+
+# CORS とセキュリティヘッダー
 [[headers]]
   for = "/api/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
 
+# PWA ファイルのキャッシュ設定
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+# 開発環境設定
 [dev]
   framework = "#static"
   targetPort = 3000
+  functionsPort = 9999
+
+# 関数設定
+[functions]
+  node_bundler = "esbuild"
+  
+[functions."location-check"]
+  timeout = 10
+
+[functions."devices"]
+  timeout = 10
+
+[functions."test-aircon"]
+  timeout = 10
