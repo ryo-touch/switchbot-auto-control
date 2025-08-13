@@ -8,7 +8,7 @@
 // ========================================
 const DEFAULT_SETTINGS = {
     triggerDistance: 100,     // トリガー距離(m)
-    updateInterval: 30,       // 更新間隔(秒) - 頻度を下げる
+    updateInterval: 60,       // 位置情報取得の更新間隔(秒)
     debugMode: false,         // デバッグモード
     homeLatitude: null,       // 自宅緯度
     homeLongitude: null       // 自宅経度
