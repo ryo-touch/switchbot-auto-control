@@ -1,0 +1,415 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+    background-color: #f2f2f7;
+    color: #1c1c1e;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+    max-width: 414px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background-color: #f2f2f7;
+}
+
+/* Header */
+.app-header {
+    background: linear-gradient(135deg, #007AFF, #5856D6);
+    color: white;
+    padding: 60px 20px 20px;
+    text-align: center;
+    border-radius: 0 0 20px 20px;
+}
+
+.app-header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #ff3b30;
+    transition: background-color 0.3s ease;
+}
+
+.status-dot.connected {
+    background-color: #30d158;
+}
+
+.status-dot.warning {
+    background-color: #ff9500;
+}
+
+/* Main Content */
+.app-main {
+    padding: 20px;
+    gap: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Card Styles */
+.info-card,
+.control-card,
+.log-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.info-card h2,
+.control-card h2,
+.log-card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1c1c1e;
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f2f2f7;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-item label {
+    font-weight: 500;
+    color: #8e8e93;
+    font-size: 14px;
+}
+
+.info-item span {
+    font-weight: 600;
+    color: #1c1c1e;
+    font-size: 14px;
+}
+
+/* Control Buttons */
+.control-buttons {
+    display: grid;
+    gap: 12px;
+}
+
+.btn {
+    padding: 16px 24px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #007AFF;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary {
+    background: #ff3b30;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #d70015;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #007AFF;
+    border: 2px solid #007AFF;
+}
+
+.btn-outline:hover {
+    background: #007AFF;
+    color: white;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 14px;
+    margin-top: 12px;
+    background: #f2f2f7;
+    color: #8e8e93;
+}
+
+.btn-small:hover {
+    background: #e5e5ea;
+}
+
+/* Log Container */
+.log-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #f2f2f7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #f9f9f9;
+}
+
+.log-item {
+    display: flex;
+    gap: 12px;
+    padding: 4px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #e5e5ea;
+}
+
+.log-item:last-child {
+    border-bottom: none;
+}
+
+.log-time {
+    color: #8e8e93;
+    font-weight: 500;
+    min-width: 60px;
+}
+
+.log-message {
+    color: #1c1c1e;
+    flex: 1;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    margin: 20px;
+    padding: 0;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #f2f2f7;
+}
+
+.modal-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #8e8e93;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #1c1c1e;
+}
+
+.setting-item input[type="number"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.setting-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px;
+    border-top: 1px solid #f2f2f7;
+}
+
+.modal-footer .btn {
+    flex: 1;
+    margin: 0;
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1c1c1e;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1001;
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Status Colors */
+.status-monitoring {
+    color: #30d158;
+}
+
+.status-stopped {
+    color: #8e8e93;
+}
+
+.status-error {
+    color: #ff3b30;
+}
+
+.status-warning {
+    color: #ff9500;
+}
+
+/* Responsive Design */
+@media (max-width: 375px) {
+    .app-main {
+        padding: 16px;
+    }
+
+    .info-card,
+    .control-card,
+    .log-card {
+        padding: 16px;
+    }
+
+    .btn {
+        padding: 14px 20px;
+        font-size: 15px;
+    }
+}
+
+/* PWA Specific Styles */
+@media (display-mode: standalone) {
+    .app-header {
+        padding-top: 70px; /* Account for status bar */
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #000000;
+        color: #ffffff;
+    }
+
+    .app-container {
+        background-color: #000000;
+    }
+
+    .info-card,
+    .control-card,
+    .log-card {
+        background: #1c1c1e;
+        color: #ffffff;
+    }
+
+    .info-item {
+        border-bottom-color: #2c2c2e;
+    }
+
+    .log-container {
+        background: #2c2c2e;
+        border-color: #2c2c2e;
+    }
+
+    .modal-content {
+        background: #1c1c1e;
+        color: #ffffff;
+    }
+
+    .modal-header,
+    .modal-footer {
+        border-color: #2c2c2e;
+    }
+
+    .setting-item input[type="number"] {
+        background: #2c2c2e;
+        border-color: #3a3a3c;
+        color: #ffffff;
+    }
+}
