@@ -976,7 +976,6 @@ class AppController {
 
         if (this.locationMonitor.startMonitoring()) {
             this.uiController.updateMonitoringStatus(true);
-            this.uiController.addLog('位置情報監視を開始しました');
             this.uiController.showNotification('位置情報監視を開始しました');
         }
     }
