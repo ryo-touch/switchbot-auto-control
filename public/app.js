@@ -353,6 +353,34 @@ class SwitchBotAPI {
     }
 
     /**
+     * エアコンの現在状態を取得
+     */
+    async getAirconStatus() {
+        try {
+            await this.waitForRateLimit();
+
+            const response = await fetch('/api/aircon-status', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+            }
+
+            const result = await response.json();
+            this.lastCallTime = Date.now();
+            return result;
+
+        } catch (error) {
+            console.error('Get Aircon Status Error:', error);
+            throw this.handleAPIError(error);
+        }
+    }
+
+    /**
      * エアコン手動制御
      */
     async testAirconControl(action = 'off') {
@@ -1045,6 +1073,22 @@ class AppController {
                 this.uiController.addLog(`制御判定実行中... (距離: ${Math.round(distance)}m)`);
             }
 
+            // まずエアコンの現在状態をチェック
+            const statusResult = await this.switchBotAPI.getAirconStatus();
+
+            if (settings.debugMode) {
+                this.uiController.addLog(`エアコン現在状態: ${statusResult.power}`);
+            }
+
+            // エアコンがOFFの場合は何もしない
+            if (statusResult.power === 'off') {
+                if (settings.debugMode) {
+                    this.uiController.addLog('エアコンは既にOFFのため制御をスキップしました');
+                }
+                return;
+            }
+
+            // エアコンがONの場合のみ制御を実行
             const result = await this.switchBotAPI.checkLocationAndControl(
                 position.latitude,
                 position.longitude
