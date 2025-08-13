@@ -1,0 +1,30 @@
+{
+  "name": "switchbot-auto-control",
+  "version": "1.0.0",
+  "description": "PWA for automatic SwitchBot air conditioner control based on iPhone location",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx http-server public -p 3000",
+    "build": "echo 'No build step required for static PWA'",
+    "start": "npx http-server public -p 3000",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "pwa",
+    "switchbot",
+    "location",
+    "automation",
+    "air-conditioner",
+    "iot"
+  ],
+  "author": "ryosakai",
+  "license": "MIT",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
