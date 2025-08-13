@@ -259,7 +259,10 @@ body {
     border-radius: 16px;
     width: 90%;
     max-width: 400px;
+    max-height: 80vh;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
@@ -285,6 +288,8 @@ body {
 
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .setting-item {
@@ -341,9 +346,13 @@ body {
 
 .modal-footer {
     display: flex;
-    gap: 12px;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
     padding: 20px;
     border-top: 1px solid #f2f2f7;
+    margin-top: auto;
+    flex-shrink: 0;
 }
 
 .modal-footer .btn {
