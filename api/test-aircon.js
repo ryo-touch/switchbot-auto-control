@@ -19,7 +19,7 @@ async function sendAirconCommand(action = 'off') {
 
         // SwitchBot API v1.1 エアコン制御コマンド（赤外線デバイス用）
         let commandBody;
-        
+
         if (action === 'on') {
             commandBody = {
                 command: 'turnOn',
@@ -29,7 +29,7 @@ async function sendAirconCommand(action = 'off') {
         } else if (action === 'off') {
             commandBody = {
                 command: 'turnOff',
-                parameter: 'default', 
+                parameter: 'default',
                 commandType: 'command'
             };
         } else {
