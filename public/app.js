@@ -686,8 +686,8 @@ class AppController {
             this.toggleMonitoring();
         };
 
-        this.uiController.onManualControl = () => {
-            this.manualControl();
+        this.uiController.onManualControl = (action) => {
+            this.manualControl(action);
         };
 
         this.uiController.onSettingsSaved = (settings) => {
