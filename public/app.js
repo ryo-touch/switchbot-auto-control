@@ -525,7 +525,9 @@ class UIController {
                 `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 
             // 位置情報取得成功ログ
-            console.log('位置情報更新:', { latitude, longitude, timestamp: new Date().toLocaleTimeString() });
+            const logTimestamp = new Date();
+            const logTimeStr = `${logTimestamp.getHours().toString().padStart(2, '0')}:${logTimestamp.getMinutes().toString().padStart(2, '0')}:${logTimestamp.getSeconds().toString().padStart(2, '0')}`;
+            console.log('位置情報更新:', { latitude, longitude, timestamp: logTimeStr });
         }
     }
 
@@ -600,7 +602,7 @@ class UIController {
         if (this.elements.lastControl && timestamp) {
             const date = new Date(timestamp);
             this.elements.lastControl.textContent =
-                `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
         }
     }
 
@@ -624,7 +626,7 @@ class UIController {
         logEntry.className = 'log-entry';
 
         const timestamp = new Date();
-        const timeStr = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
+        const timeStr = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
 
         logEntry.innerHTML = `<span class="log-time">${timeStr}</span> ${message}`;
 
