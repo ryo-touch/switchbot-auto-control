@@ -17,12 +17,24 @@ async function sendAirconCommand(action = 'off') {
         const baseURL = getBaseURL();
         const deviceId = getAirconDeviceId();
 
-        // SwitchBot API v1.1 エアコン制御コマンド
-        const commandBody = {
-            command: 'setAll',
-            parameter: action,
-            commandType: 'command'
-        };
+        // SwitchBot API v1.1 エアコン制御コマンド（赤外線デバイス用）
+        let commandBody;
+        
+        if (action === 'on') {
+            commandBody = {
+                command: 'turnOn',
+                parameter: 'default',
+                commandType: 'command'
+            };
+        } else if (action === 'off') {
+            commandBody = {
+                command: 'turnOff',
+                parameter: 'default', 
+                commandType: 'command'
+            };
+        } else {
+            throw new Error(`Unsupported action: ${action}`);
+        }
 
         const url = `${baseURL}/devices/${deviceId}/commands`;
 

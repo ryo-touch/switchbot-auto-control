@@ -76,8 +76,8 @@ async function stopAircon() {
         const deviceId = getAirconDeviceId();
 
         const commandBody = {
-            command: 'setAll',
-            parameter: 'off',
+            command: 'turnOff',
+            parameter: 'default',
             commandType: 'command'
         };
 
