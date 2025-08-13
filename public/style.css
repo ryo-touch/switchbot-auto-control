@@ -210,6 +210,104 @@ body {
     background: #f9f9f9;
 }
 
+.log-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.log-entry:hover {
+    background-color: #e9e9eb;
+}
+
+.log-entry:last-child {
+    margin-bottom: 0;
+}
+
+.log-content {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+}
+
+.log-time {
+    color: #8e8e93;
+    font-weight: 500;
+    min-width: 60px;
+}
+
+.log-message {
+    color: #1c1c1e;
+    flex: 1;
+}
+
+.log-copy-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.log-copy-btn:hover {
+    opacity: 1;
+    background-color: #d1d1d6;
+}
+
+.log-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-secondary {
+    background-color: #f2f2f7;
+    color: #1c1c1e;
+}
+
+.btn-secondary:hover {
+    background-color: #e5e5ea;
+}
+
+/* コピーフィードバック */
+.copy-feedback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    z-index: 10000;
+    animation: copyFeedback 2s ease-in-out;
+}
+
+@keyframes copyFeedback {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    20%, 80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
+
 .log-item {
     display: flex;
     gap: 12px;
@@ -220,12 +318,6 @@ body {
 
 .log-item:last-child {
     border-bottom: none;
-}
-
-.log-time {
-    color: #8e8e93;
-    font-weight: 500;
-    min-width: 60px;
 }
 
 .log-message {

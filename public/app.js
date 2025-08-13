@@ -469,6 +469,7 @@ class UIController {
             cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
             closeModalBtn: document.getElementById('closeModalBtn'),
             clearLogBtn: document.getElementById('clearLogBtn'),
+            copyAllLogsBtn: document.getElementById('copyAllLogsBtn'),
             homeLatInput: document.getElementById('homeLatitude'),
             homeLonInput: document.getElementById('homeLongitude'),
             triggerDistanceInput: document.getElementById('triggerDistance'),
@@ -532,6 +533,13 @@ class UIController {
         if (this.elements.clearLogBtn) {
             this.elements.clearLogBtn.addEventListener('click', () => {
                 this.clearLogs();
+            });
+        }
+
+        // 全ログコピーボタン
+        if (this.elements.copyAllLogsBtn) {
+            this.elements.copyAllLogsBtn.addEventListener('click', () => {
+                this.copyAllLogs();
             });
         }
 
@@ -657,7 +665,28 @@ class UIController {
         const timestamp = new Date();
         const timeStr = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
 
-        logEntry.innerHTML = `<span class="log-time">${timeStr}</span> ${message}`;
+        // ログエントリの内容
+        const logContent = `${timeStr} ${message}`;
+        
+        logEntry.innerHTML = `
+            <div class="log-content">
+                <span class="log-time">${timeStr}</span>
+                <span class="log-message">${message}</span>
+            </div>
+            <button class="log-copy-btn" title="ログをコピー">📋</button>
+        `;
+
+        // コピーボタンのイベントリスナー
+        const copyBtn = logEntry.querySelector('.log-copy-btn');
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.copyToClipboard(logContent);
+        });
+
+        // ログエントリ全体のクリックでもコピー
+        logEntry.addEventListener('click', () => {
+            this.copyToClipboard(logContent);
+        });
 
         this.elements.logContainer.insertBefore(logEntry, this.elements.logContainer.firstChild);
 
@@ -765,7 +794,15 @@ class UIController {
     saveLogsToStorage() {
         if (!this.elements.logContainer) return;
 
-        const logs = Array.from(this.elements.logContainer.children).map(entry => entry.textContent);
+        const logs = Array.from(this.elements.logContainer.children).map(entry => {
+            const timeSpan = entry.querySelector('.log-time');
+            const messageSpan = entry.querySelector('.log-message');
+            if (timeSpan && messageSpan) {
+                return `${timeSpan.textContent} ${messageSpan.textContent}`;
+            }
+            // フォールバック：ボタンを除いたテキストコンテンツを取得
+            return entry.textContent.replace('📋', '').trim();
+        });
         localStorage.setItem('switchbot-logs', JSON.stringify(logs));
     }
 
@@ -777,10 +814,58 @@ class UIController {
         if (savedLogs && this.elements.logContainer) {
             const logs = JSON.parse(savedLogs);
             logs.forEach(log => {
-                const logEntry = document.createElement('div');
-                logEntry.className = 'log-entry';
-                logEntry.textContent = log;
-                this.elements.logContainer.appendChild(logEntry);
+                // 古い形式のログをパース
+                const timeMatch = log.match(/^(\d{2}:\d{2}:\d{2})/);
+                if (timeMatch) {
+                    const timeStr = timeMatch[1];
+                    const message = log.substring(timeStr.length + 1); // 時刻部分と空白を除去
+                    
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'log-entry';
+                    
+                    logEntry.innerHTML = `
+                        <div class="log-content">
+                            <span class="log-time">${timeStr}</span>
+                            <span class="log-message">${message}</span>
+                        </div>
+                        <button class="log-copy-btn" title="ログをコピー">📋</button>
+                    `;
+
+                    // イベントリスナーを設定
+                    const copyBtn = logEntry.querySelector('.log-copy-btn');
+                    copyBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.copyToClipboard(log);
+                    });
+
+                    logEntry.addEventListener('click', () => {
+                        this.copyToClipboard(log);
+                    });
+
+                    this.elements.logContainer.appendChild(logEntry);
+                } else {
+                    // フォールバック：古い形式のログをそのまま表示
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'log-entry';
+                    logEntry.innerHTML = `
+                        <div class="log-content">
+                            <span class="log-message">${log}</span>
+                        </div>
+                        <button class="log-copy-btn" title="ログをコピー">📋</button>
+                    `;
+
+                    const copyBtn = logEntry.querySelector('.log-copy-btn');
+                    copyBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.copyToClipboard(log);
+                    });
+
+                    logEntry.addEventListener('click', () => {
+                        this.copyToClipboard(log);
+                    });
+
+                    this.elements.logContainer.appendChild(logEntry);
+                }
             });
         }
     }
@@ -794,6 +879,101 @@ class UIController {
         }
         localStorage.removeItem('switchbot-logs');
         this.addLog('ログをクリアしました');
+    }
+
+    /**
+     * クリップボードにテキストをコピー
+     */
+    async copyToClipboard(text) {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                // 新しいClipboard API（HTTPS必須）
+                await navigator.clipboard.writeText(text);
+            } else {
+                // フォールバック：古いブラウザ対応
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                textArea.remove();
+            }
+            
+            // コピー成功の視覚的フィードバック
+            this.showCopyFeedback();
+            
+        } catch (error) {
+            console.error('コピーに失敗しました:', error);
+            // エラー時は手動コピーのプロンプトを表示
+            this.showManualCopyPrompt(text);
+        }
+    }
+
+    /**
+     * コピー成功の視覚的フィードバック
+     */
+    showCopyFeedback() {
+        // 既存のフィードバックがあれば削除
+        const existingFeedback = document.querySelector('.copy-feedback');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+
+        const feedback = document.createElement('div');
+        feedback.className = 'copy-feedback';
+        feedback.textContent = '📋 コピーしました';
+        document.body.appendChild(feedback);
+
+        // アニメーション後に削除
+        setTimeout(() => {
+            feedback.remove();
+        }, 2000);
+    }
+
+    /**
+     * 手動コピー用のプロンプトを表示
+     */
+    showManualCopyPrompt(text) {
+        const promptText = `以下のテキストを手動でコピーしてください:\n\n${text}`;
+        
+        // モバイルでは短縮版、デスクトップでは詳細版
+        if (window.innerWidth <= 768) {
+            alert('コピーに失敗しました。テキストを長押しして手動でコピーしてください。');
+        } else {
+            prompt('コピーに失敗しました。以下のテキストを選択してCtrl+C(Cmd+C)でコピーしてください:', text);
+        }
+    }
+
+    /**
+     * 全ログをコピー
+     */
+    copyAllLogs() {
+        if (!this.elements.logContainer) return;
+
+        const logEntries = Array.from(this.elements.logContainer.children);
+        if (logEntries.length === 0) {
+            alert('コピーするログがありません');
+            return;
+        }
+
+        // ログエントリを時系列順（最新が最後）に並び替えて結合
+        const allLogs = logEntries
+            .reverse() // 表示は最新が上だが、コピー時は古い順にする
+            .map(entry => {
+                const timeSpan = entry.querySelector('.log-time');
+                const messageSpan = entry.querySelector('.log-message');
+                if (timeSpan && messageSpan) {
+                    return `${timeSpan.textContent} ${messageSpan.textContent}`;
+                }
+                return entry.textContent.replace('📋', '').trim(); // フォールバック
+            })
+            .join('\n');
+
+        this.copyToClipboard(allLogs);
     }
 
     /**
