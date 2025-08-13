@@ -10,11 +10,11 @@
  * @returns {boolean} 座標が有効かどうか
  */
 function validateCoordinates(latitude, longitude) {
-    return !isNaN(latitude) && 
-           !isNaN(longitude) && 
-           latitude >= -90 && 
-           latitude <= 90 && 
-           longitude >= -180 && 
+    return !isNaN(latitude) &&
+           !isNaN(longitude) &&
+           latitude >= -90 &&
+           latitude <= 90 &&
+           longitude >= -180 &&
            longitude <= 180;
 }
 
@@ -33,7 +33,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     }
 
     const R = 6371000; // 地球半径（メートル）
-    
+
     // 度をラジアンに変換
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
@@ -47,12 +47,12 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     const distance = R * c;
-    
+
     // 結果の妥当性チェック（0～地球半周程度）
     if (distance < 0 || distance > 20003931) {
         throw new Error('距離計算で異常値が検出されました');
     }
-    
+
     return distance;
 }
 
@@ -69,7 +69,7 @@ function shouldTriggerControl(currentLat, currentLon, homeLat, homeLon, threshol
     try {
         const distance = calculateDistance(currentLat, currentLon, homeLat, homeLon);
         const shouldTrigger = distance > threshold;
-        
+
         return {
             distance: Math.round(distance),
             threshold,
@@ -103,7 +103,7 @@ function formatDistance(distance) {
     if (isNaN(distance) || distance < 0) {
         return '不明';
     }
-    
+
     if (distance < 1000) {
         return `${Math.round(distance)}m`;
     } else {
@@ -120,11 +120,11 @@ function calculateCenterPoint(coordinates) {
     if (!Array.isArray(coordinates) || coordinates.length === 0) {
         throw new Error('座標配列が空です');
     }
-    
+
     let totalLat = 0;
     let totalLon = 0;
     let validCount = 0;
-    
+
     for (const coord of coordinates) {
         if (validateCoordinates(coord.lat, coord.lon)) {
             totalLat += coord.lat;
@@ -132,11 +132,11 @@ function calculateCenterPoint(coordinates) {
             validCount++;
         }
     }
-    
+
     if (validCount === 0) {
         throw new Error('有効な座標が見つかりません');
     }
-    
+
     return {
         lat: totalLat / validCount,
         lon: totalLon / validCount

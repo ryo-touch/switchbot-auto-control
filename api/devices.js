@@ -14,17 +14,17 @@ async function fetchDevices() {
     try {
         const headers = createAuthHeaders();
         const baseURL = getBaseURL();
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Fetching devices from:', `${baseURL}/devices`);
         }
-        
+
         // Node.js 18+ の fetch を使用
         const response = await fetch(`${baseURL}/devices`, {
             method: 'GET',
             headers
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             const error = new Error(`API request failed: ${response.status}`);
@@ -34,15 +34,15 @@ async function fetchDevices() {
             };
             throw error;
         }
-        
+
         const data = await response.json();
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Devices response:', JSON.stringify(data, null, 2));
         }
-        
+
         return data;
-        
+
     } catch (error) {
         logError('fetchDevices', error);
         throw error;
@@ -56,7 +56,7 @@ async function fetchDevices() {
  */
 function formatDeviceList(apiResponse) {
     const devices = [];
-    
+
     // 物理デバイス
     if (apiResponse.body && apiResponse.body.deviceList) {
         apiResponse.body.deviceList.forEach(device => {
@@ -69,7 +69,7 @@ function formatDeviceList(apiResponse) {
             });
         });
     }
-    
+
     // 赤外線デバイス
     if (apiResponse.body && apiResponse.body.infraredRemoteList) {
         apiResponse.body.infraredRemoteList.forEach(device => {
@@ -82,7 +82,7 @@ function formatDeviceList(apiResponse) {
             });
         });
     }
-    
+
     return devices;
 }
 
@@ -92,7 +92,7 @@ function formatDeviceList(apiResponse) {
  * @returns {Array} エアコンデバイス一覧
  */
 function findAirConditioners(devices) {
-    return devices.filter(device => 
+    return devices.filter(device =>
         device.deviceType === 'Air Conditioner' ||
         device.deviceType === 'DIY Air Conditioner' ||
         device.deviceName.toLowerCase().includes('aircon') ||
@@ -112,12 +112,12 @@ exports.handler = async (event, context) => {
         if (event.httpMethod === 'OPTIONS') {
             return createCorsResponse();
         }
-        
+
         // HTTPメソッドの検証
         if (!validateHttpMethod(event.httpMethod, ['GET'])) {
             return createErrorResponse(405, '許可されていないHTTPメソッドです');
         }
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Devices API called:', {
                 method: event.httpMethod,
@@ -125,16 +125,16 @@ exports.handler = async (event, context) => {
                 timestamp: new Date().toISOString()
             });
         }
-        
+
         // SwitchBot APIからデバイス一覧を取得
         const apiResponse = await fetchDevices();
-        
+
         // デバイス一覧を整形
         const devices = formatDeviceList(apiResponse);
-        
+
         // エアコンデバイスを特定
         const airConditioners = findAirConditioners(devices);
-        
+
         // レスポンスデータ作成
         const responseData = {
             devices,
@@ -146,19 +146,19 @@ exports.handler = async (event, context) => {
                 airConditionerCount: airConditioners.length
             }
         };
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Response data:', JSON.stringify(responseData, null, 2));
         }
-        
+
         return createSuccessResponse(responseData);
-        
+
     } catch (error) {
         logError('devices-api', error, {
             method: event.httpMethod,
             path: event.path
         });
-        
+
         // SwitchBot APIエラーの場合
         const { statusCode, message, details } = handleSwitchBotError(error);
         return createErrorResponse(statusCode, message, details);

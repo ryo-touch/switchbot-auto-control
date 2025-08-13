@@ -18,7 +18,7 @@ function getAllowedOrigins() {
             'http://127.0.0.1:3001'
         ];
     }
-    
+
     return origins.split(',').map(origin => origin.trim());
 }
 
@@ -31,7 +31,7 @@ function isOriginAllowed(origin) {
     if (!origin) {
         return true; // オリジンヘッダーがない場合は許可（サーバー間通信など）
     }
-    
+
     const allowedOrigins = getAllowedOrigins();
     return allowedOrigins.includes(origin) || allowedOrigins.includes('*');
 }
@@ -43,7 +43,7 @@ function isOriginAllowed(origin) {
  */
 function createSecureCorsHeaders(origin = null) {
     const allowedOrigin = isOriginAllowed(origin) ? (origin || '*') : 'null';
-    
+
     return {
         'Access-Control-Allow-Origin': allowedOrigin,
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -65,8 +65,8 @@ const requestCounts = new Map();
  * @returns {string} クライアントIP
  */
 function getClientIP(event) {
-    return event.headers['x-forwarded-for'] || 
-           event.headers['x-real-ip'] || 
+    return event.headers['x-forwarded-for'] ||
+           event.headers['x-real-ip'] ||
            event.headers['cf-connecting-ip'] ||
            'unknown';
 }
@@ -81,7 +81,7 @@ function getClientIP(event) {
 function checkRateLimit(ip, maxRequests = 60, windowMs = 60000) {
     const now = Date.now();
     const windowStart = now - windowMs;
-    
+
     // 古いエントリを削除
     if (requestCounts.has(ip)) {
         const requests = requestCounts.get(ip).filter(time => time > windowStart);
@@ -89,9 +89,9 @@ function checkRateLimit(ip, maxRequests = 60, windowMs = 60000) {
     } else {
         requestCounts.set(ip, []);
     }
-    
+
     const currentRequests = requestCounts.get(ip);
-    
+
     // 制限チェック
     if (currentRequests.length >= maxRequests) {
         return {
@@ -100,11 +100,11 @@ function checkRateLimit(ip, maxRequests = 60, windowMs = 60000) {
             resetTime: Math.ceil((currentRequests[0] + windowMs) / 1000)
         };
     }
-    
+
     // リクエストを記録
     currentRequests.push(now);
     requestCounts.set(ip, currentRequests);
-    
+
     return {
         allowed: true,
         remainingRequests: maxRequests - currentRequests.length,
@@ -129,7 +129,7 @@ function sanitizeInput(input) {
             .replace(/\//g, '&#x2F;')
             .trim();
     }
-    
+
     if (typeof input === 'number') {
         // 数値の範囲チェック
         if (isNaN(input) || !isFinite(input)) {
@@ -137,7 +137,7 @@ function sanitizeInput(input) {
         }
         return input;
     }
-    
+
     if (typeof input === 'object' && input !== null) {
         // オブジェクトの再帰的サニタイズ
         const sanitized = {};
@@ -146,7 +146,7 @@ function sanitizeInput(input) {
         }
         return sanitized;
     }
-    
+
     return input;
 }
 
@@ -161,23 +161,23 @@ function isSafeCoordinate(latitude, longitude) {
     if (isNaN(latitude) || isNaN(longitude)) {
         return false;
     }
-    
+
     if (latitude < -90 || latitude > 90) {
         return false;
     }
-    
+
     if (longitude < -180 || longitude > 180) {
         return false;
     }
-    
+
     // 異常に精密すぎる座標をブロック（プライバシー考慮）
     const latPrecision = (latitude.toString().split('.')[1] || '').length;
     const lonPrecision = (longitude.toString().split('.')[1] || '').length;
-    
+
     if (latPrecision > 8 || lonPrecision > 8) {
         return false;
     }
-    
+
     return true;
 }
 
@@ -210,7 +210,7 @@ function validateRequest(event, options = {}) {
         maxBodySize = 1024 * 10, // 10KB
         enableRateLimit = true
     } = options;
-    
+
     // HTTPメソッドチェック
     if (!allowedMethods.includes(event.httpMethod.toUpperCase())) {
         return {
@@ -219,7 +219,7 @@ function validateRequest(event, options = {}) {
             statusCode: 405
         };
     }
-    
+
     // オリジンチェック
     const origin = event.headers.origin || event.headers.Origin;
     if (!isOriginAllowed(origin)) {
@@ -229,7 +229,7 @@ function validateRequest(event, options = {}) {
             statusCode: 403
         };
     }
-    
+
     // ボディサイズチェック
     if (event.body && event.body.length > maxBodySize) {
         return {
@@ -238,7 +238,7 @@ function validateRequest(event, options = {}) {
             statusCode: 413
         };
     }
-    
+
     // 必須ボディチェック
     if (requireBody && !event.body) {
         return {
@@ -247,13 +247,13 @@ function validateRequest(event, options = {}) {
             statusCode: 400
         };
     }
-    
+
     // レート制限チェック
     if (enableRateLimit) {
         const ip = getClientIP(event);
         const maxRequests = parseInt(process.env.MAX_REQUESTS_PER_MINUTE) || 60;
         const rateLimit = checkRateLimit(ip, maxRequests);
-        
+
         if (!rateLimit.allowed) {
             return {
                 valid: false,
@@ -267,7 +267,7 @@ function validateRequest(event, options = {}) {
             };
         }
     }
-    
+
     return {
         valid: true,
         clientIP: getClientIP(event),

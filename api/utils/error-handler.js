@@ -29,7 +29,7 @@ function createErrorResponse(statusCode, message, details = null) {
             }
         })
     };
-    
+
     return response;
 }
 
@@ -66,10 +66,10 @@ function handleSwitchBotError(error) {
     let statusCode = 500;
     let message = 'SwitchBot APIでエラーが発生しました';
     let details = null;
-    
+
     if (error.response) {
         statusCode = error.response.status;
-        
+
         switch (statusCode) {
             case 401:
                 message = 'SwitchBot API認証に失敗しました';
@@ -96,7 +96,7 @@ function handleSwitchBotError(error) {
             default:
                 message = `SwitchBot API エラー (${statusCode})`;
         }
-        
+
         // レスポンスボディにエラー詳細がある場合
         if (error.response.data) {
             details = error.response.data.message || details;
@@ -121,7 +121,7 @@ function handleSwitchBotError(error) {
                 details = error.message;
         }
     }
-    
+
     return { statusCode, message, details };
 }
 
@@ -159,7 +159,7 @@ function logError(context, error, additionalInfo = {}) {
         },
         ...additionalInfo
     };
-    
+
     // デバッグモードの場合は詳細を出力
     if (process.env.DEBUG_MODE === 'true') {
         console.error('[DEBUG] Error Details:', JSON.stringify(logData, null, 2));

@@ -54,7 +54,7 @@
 # 関数設定
 [functions]
   node_bundler = "esbuild"
-  
+
 [functions."location-check"]
   timeout = 10
 

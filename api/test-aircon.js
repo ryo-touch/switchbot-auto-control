@@ -16,16 +16,16 @@ async function sendAirconCommand(action = 'off') {
         const headers = createAuthHeaders();
         const baseURL = getBaseURL();
         const deviceId = getAirconDeviceId();
-        
+
         // SwitchBot API v1.1 エアコン制御コマンド
         const commandBody = {
             command: 'setAll',
             parameter: action,
             commandType: 'command'
         };
-        
+
         const url = `${baseURL}/devices/${deviceId}/commands`;
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Sending aircon command:', {
                 url,
@@ -34,13 +34,13 @@ async function sendAirconCommand(action = 'off') {
                 headers: { ...headers, Authorization: '[HIDDEN]', sign: '[HIDDEN]' }
             });
         }
-        
+
         const response = await fetch(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(commandBody)
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             const error = new Error(`Aircon control failed: ${response.status}`);
@@ -50,13 +50,13 @@ async function sendAirconCommand(action = 'off') {
             };
             throw error;
         }
-        
+
         const data = await response.json();
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Aircon command response:', JSON.stringify(data, null, 2));
         }
-        
+
         return {
             success: true,
             action,
@@ -64,7 +64,7 @@ async function sendAirconCommand(action = 'off') {
             response: data,
             timestamp: Date.now()
         };
-        
+
     } catch (error) {
         logError('sendAirconCommand', error, { action, deviceId: getAirconDeviceId() });
         throw error;
@@ -78,21 +78,21 @@ async function sendAirconCommand(action = 'off') {
  */
 function validateAction(action) {
     const validActions = ['on', 'off', 'toggle'];
-    
+
     if (!action) {
         return {
             valid: false,
             error: 'アクションパラメータが必要です'
         };
     }
-    
+
     if (!validActions.includes(action.toLowerCase())) {
         return {
             valid: false,
             error: `無効なアクションです。使用可能: ${validActions.join(', ')}`
         };
     }
-    
+
     return {
         valid: true,
         action: action.toLowerCase()
@@ -110,12 +110,12 @@ function parseRequestBody(body) {
             // デフォルトアクション
             return { action: 'off' };
         }
-        
+
         const parsed = JSON.parse(body);
         return {
             action: parsed.action || 'off'
         };
-        
+
     } catch (error) {
         throw new Error('リクエストボディのJSON解析に失敗しました');
     }
@@ -132,7 +132,7 @@ function generateResultMessage(action) {
         'off': 'エアコンを停止しました',
         'toggle': 'エアコンの状態を切り替えました'
     };
-    
+
     return messages[action] || `エアコンを制御しました (${action})`;
 }
 
@@ -148,12 +148,12 @@ exports.handler = async (event, context) => {
         if (event.httpMethod === 'OPTIONS') {
             return createCorsResponse();
         }
-        
+
         // HTTPメソッドの検証
         if (!validateHttpMethod(event.httpMethod, ['POST'])) {
             return createErrorResponse(405, COMMON_ERRORS.INVALID_METHOD.message);
         }
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Test aircon API called:', {
                 method: event.httpMethod,
@@ -161,59 +161,59 @@ exports.handler = async (event, context) => {
                 timestamp: new Date().toISOString()
             });
         }
-        
+
         // リクエストボディの解析
         const { action } = parseRequestBody(event.body);
-        
+
         // アクションのバリデーション
         const validation = validateAction(action);
         if (!validation.valid) {
             return createErrorResponse(400, validation.error);
         }
-        
+
         const validatedAction = validation.action;
-        
+
         // エアコン制御実行
         const result = await sendAirconCommand(validatedAction);
-        
+
         // 制御結果メッセージ生成
         const message = generateResultMessage(validatedAction);
-        
+
         // レスポンスデータ作成
         const responseData = {
             action: validatedAction,
             message,
             deviceId: getAirconDeviceId(),
             timestamp: result.timestamp,
-            ...(isDebugMode() && { 
+            ...(isDebugMode() && {
                 debug: {
                     apiResponse: result.response
                 }
             })
         };
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Test aircon response:', JSON.stringify(responseData, null, 2));
         }
-        
+
         return createSuccessResponse(responseData);
-        
+
     } catch (error) {
         logError('test-aircon-api', error, {
             method: event.httpMethod,
             body: event.body
         });
-        
+
         // 設定エラー（デバイスIDなど）
         if (error.message.includes('設定されていません') || error.message.includes('AIRCON_DEVICE_ID')) {
             return createErrorResponse(500, '設定エラー', error.message);
         }
-        
+
         // バリデーションエラー
         if (error.message.includes('JSON解析') || error.message.includes('バリデーション')) {
             return createErrorResponse(400, error.message);
         }
-        
+
         // SwitchBot APIエラー
         const { statusCode, message, details } = handleSwitchBotError(error);
         return createErrorResponse(statusCode, message, details);

@@ -35,11 +35,11 @@ function createMockEvent(method, endpoint, body = null) {
 function logTestResult(testName, response) {
     console.log(`\n=== ${testName} ===`);
     console.log(`Status: ${response.statusCode}`);
-    
+
     if (response.headers) {
         console.log(`Headers:`, Object.keys(response.headers).join(', '));
     }
-    
+
     if (response.body) {
         try {
             const body = JSON.parse(response.body);
@@ -58,10 +58,10 @@ async function testDevicesAPI() {
         const { handler } = require('./devices');
         const event = createMockEvent('GET', 'devices');
         const context = {};
-        
+
         const response = await handler(event, context);
         logTestResult('Devices API Test', response);
-        
+
         return response.statusCode === 200;
     } catch (error) {
         console.error('Devices API Test Failed:', error.message);
@@ -75,14 +75,14 @@ async function testDevicesAPI() {
 async function testAirconAPI() {
     try {
         const { handler } = require('./test-aircon');
-        
+
         // OFFコマンドテスト
         const eventOff = createMockEvent('POST', 'test-aircon', { action: 'off' });
         const context = {};
-        
+
         const response = await handler(eventOff, context);
         logTestResult('Test Aircon API (OFF)', response);
-        
+
         return response.statusCode === 200;
     } catch (error) {
         console.error('Test Aircon API Failed:', error.message);
@@ -96,30 +96,30 @@ async function testAirconAPI() {
 async function testLocationCheckAPI() {
     try {
         const { handler } = require('./location-check');
-        
+
         // テスト用座標（自宅から200m離れた位置）
         const homeLatitude = parseFloat(process.env.HOME_LATITUDE);
         const homeLongitude = parseFloat(process.env.HOME_LONGITUDE);
-        
+
         if (isNaN(homeLatitude) || isNaN(homeLongitude)) {
             console.error('HOME_LATITUDE または HOME_LONGITUDE が設定されていません');
             return false;
         }
-        
+
         // 約200m南に移動した座標
         const testLatitude = homeLatitude - 0.0018;
         const testLongitude = homeLongitude;
-        
+
         const event = createMockEvent('POST', 'location-check', {
             latitude: testLatitude,
             longitude: testLongitude,
             timestamp: Date.now()
         });
-        
+
         const context = {};
         const response = await handler(event, context);
         logTestResult('Location Check API Test', response);
-        
+
         return response.statusCode === 200;
     } catch (error) {
         console.error('Location Check API Test Failed:', error.message);
@@ -133,17 +133,17 @@ async function testLocationCheckAPI() {
 async function testErrorHandling() {
     try {
         const { handler } = require('./location-check');
-        
+
         // 無効な座標でテスト
         const event = createMockEvent('POST', 'location-check', {
             latitude: 'invalid',
             longitude: 'invalid'
         });
-        
+
         const context = {};
         const response = await handler(event, context);
         logTestResult('Error Handling Test', response);
-        
+
         return response.statusCode === 400;
     } catch (error) {
         console.error('Error Handling Test Failed:', error.message);
@@ -159,11 +159,11 @@ async function testCORS() {
         const { handler } = require('./devices');
         const event = createMockEvent('OPTIONS', 'devices');
         const context = {};
-        
+
         const response = await handler(event, context);
         logTestResult('CORS Test', response);
-        
-        return response.statusCode === 200 && 
+
+        return response.statusCode === 200 &&
                response.headers['Access-Control-Allow-Origin'];
     } catch (error) {
         console.error('CORS Test Failed:', error.message);
@@ -176,7 +176,7 @@ async function testCORS() {
  */
 async function runAllTests() {
     console.log('🧪 SwitchBot API テスト開始\n');
-    
+
     const tests = [
         { name: 'CORS', fn: testCORS },
         { name: 'Devices API', fn: testDevicesAPI },
@@ -184,9 +184,9 @@ async function runAllTests() {
         { name: 'Location Check API', fn: testLocationCheckAPI },
         { name: 'Error Handling', fn: testErrorHandling }
     ];
-    
+
     const results = [];
-    
+
     for (const test of tests) {
         console.log(`\n⏳ Running ${test.name}...`);
         try {
@@ -198,14 +198,14 @@ async function runAllTests() {
             console.log(`❌ ${test.name}: FAILED (${error.message})`);
         }
     }
-    
+
     // 結果サマリー
     console.log('\n📊 テスト結果サマリー');
     console.log('='.repeat(50));
-    
+
     const passed = results.filter(r => r.passed).length;
     const total = results.length;
-    
+
     results.forEach(result => {
         const status = result.passed ? '✅ PASS' : '❌ FAIL';
         console.log(`${status} ${result.name}`);
@@ -213,16 +213,16 @@ async function runAllTests() {
             console.log(`   Error: ${result.error}`);
         }
     });
-    
+
     console.log('='.repeat(50));
     console.log(`合計: ${passed}/${total} テスト通過`);
-    
+
     if (passed === total) {
         console.log('🎉 すべてのテストが成功しました！');
     } else {
         console.log('⚠️  一部のテストが失敗しました。設定を確認してください。');
     }
-    
+
     return passed === total;
 }
 

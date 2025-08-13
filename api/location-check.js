@@ -1,7 +1,7 @@
 /**
  * SwitchBot 位置チェック + エアコン制御API
  * エンドポイント: POST /.netlify/functions/location-check
- * 
+ *
  * メイン機能：位置情報を受け取り、距離判定してエアコンを自動制御
  */
 
@@ -21,9 +21,9 @@ function validateLocationRequest(body) {
             error: 'リクエストボディが必要です'
         };
     }
-    
+
     const { latitude, longitude, timestamp } = body;
-    
+
     // 緯度・経度の必須チェック
     if (latitude === undefined || longitude === undefined) {
         return {
@@ -31,11 +31,11 @@ function validateLocationRequest(body) {
             error: '緯度（latitude）と経度（longitude）が必要です'
         };
     }
-    
+
     // 数値変換
     const lat = parseFloat(latitude);
     const lon = parseFloat(longitude);
-    
+
     // 座標の妥当性チェック
     if (!validateCoordinates(lat, lon)) {
         return {
@@ -43,7 +43,7 @@ function validateLocationRequest(body) {
             error: '無効な座標です（緯度: -90〜90, 経度: -180〜180）'
         };
     }
-    
+
     // タイムスタンプの妥当性チェック（オプション）
     let validTimestamp = null;
     if (timestamp) {
@@ -57,7 +57,7 @@ function validateLocationRequest(body) {
             }
         }
     }
-    
+
     return {
         valid: true,
         coordinates: { latitude: lat, longitude: lon },
@@ -74,15 +74,15 @@ async function stopAircon() {
         const headers = createAuthHeaders();
         const baseURL = getBaseURL();
         const deviceId = getAirconDeviceId();
-        
+
         const commandBody = {
             command: 'setAll',
             parameter: 'off',
             commandType: 'command'
         };
-        
+
         const url = `${baseURL}/devices/${deviceId}/commands`;
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Stopping aircon:', {
                 url,
@@ -90,13 +90,13 @@ async function stopAircon() {
                 command: commandBody
             });
         }
-        
+
         const response = await fetch(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(commandBody)
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             const error = new Error(`Aircon stop failed: ${response.status}`);
@@ -106,15 +106,15 @@ async function stopAircon() {
             };
             throw error;
         }
-        
+
         const data = await response.json();
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Aircon stop response:', JSON.stringify(data, null, 2));
         }
-        
+
         return data;
-        
+
     } catch (error) {
         logError('stopAircon', error);
         throw error;
@@ -132,7 +132,7 @@ async function processLocationAndControl(coordinates, timestamp) {
         // 自宅位置とトリガー距離を取得
         const homeLocation = getHomeLocation();
         const triggerDistance = getTriggerDistance();
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Location processing:', {
                 current: coordinates,
@@ -140,7 +140,7 @@ async function processLocationAndControl(coordinates, timestamp) {
                 triggerDistance
             });
         }
-        
+
         // 距離計算とトリガー判定
         const triggerResult = shouldTriggerControl(
             coordinates.latitude,
@@ -149,16 +149,16 @@ async function processLocationAndControl(coordinates, timestamp) {
             homeLocation.longitude,
             triggerDistance
         );
-        
+
         let controlResult = null;
         let actionTaken = false;
-        
+
         // トリガー条件が満たされた場合、エアコンを停止
         if (triggerResult.shouldTrigger) {
             try {
                 controlResult = await stopAircon();
                 actionTaken = true;
-                
+
                 if (isDebugMode()) {
                     console.log('[DEBUG] Aircon control executed:', controlResult);
                 }
@@ -170,14 +170,14 @@ async function processLocationAndControl(coordinates, timestamp) {
                 throw controlError;
             }
         }
-        
+
         return {
             distance: triggerResult.distance,
             threshold: triggerResult.threshold,
             triggered: actionTaken,
             action: actionTaken ? 'aircon_off' : null,
-            message: actionTaken 
-                ? `エアコンを停止しました (距離: ${formatDistance(triggerResult.distance)})` 
+            message: actionTaken
+                ? `エアコンを停止しました (距離: ${formatDistance(triggerResult.distance)})`
                 : `自宅から${formatDistance(triggerResult.distance)}です`,
             controlResult,
             timestamp,
@@ -186,7 +186,7 @@ async function processLocationAndControl(coordinates, timestamp) {
                 home: homeLocation
             }
         };
-        
+
     } catch (error) {
         logError('processLocationAndControl', error, { coordinates, timestamp });
         throw error;
@@ -203,9 +203,9 @@ function parseRequestBody(body) {
         if (!body) {
             throw new Error('リクエストボディが空です');
         }
-        
+
         return JSON.parse(body);
-        
+
     } catch (error) {
         if (error.message.includes('リクエストボディが空')) {
             throw error;
@@ -226,12 +226,12 @@ exports.handler = async (event, context) => {
         if (event.httpMethod === 'OPTIONS') {
             return createCorsResponse();
         }
-        
+
         // HTTPメソッドの検証
         if (!validateHttpMethod(event.httpMethod, ['POST'])) {
             return createErrorResponse(405, COMMON_ERRORS.INVALID_METHOD.message);
         }
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Location check API called:', {
                 method: event.httpMethod,
@@ -239,21 +239,21 @@ exports.handler = async (event, context) => {
                 timestamp: new Date().toISOString()
             });
         }
-        
+
         // リクエストボディの解析
         const requestBody = parseRequestBody(event.body);
-        
+
         // 位置情報のバリデーション
         const validation = validateLocationRequest(requestBody);
         if (!validation.valid) {
             return createErrorResponse(400, validation.error);
         }
-        
+
         const { coordinates, timestamp } = validation;
-        
+
         // 位置情報処理と制御実行
         const result = await processLocationAndControl(coordinates, timestamp);
-        
+
         // レスポンスデータ作成
         const responseData = {
             success: true,
@@ -270,39 +270,39 @@ exports.handler = async (event, context) => {
                 }
             })
         };
-        
+
         if (isDebugMode()) {
             console.log('[DEBUG] Location check response:', JSON.stringify(responseData, null, 2));
         }
-        
+
         return createSuccessResponse(responseData);
-        
+
     } catch (error) {
         logError('location-check-api', error, {
             method: event.httpMethod,
             body: event.body
         });
-        
+
         // 設定エラー
-        if (error.message.includes('設定されていません') || 
-            error.message.includes('HOME_LATITUDE') || 
+        if (error.message.includes('設定されていません') ||
+            error.message.includes('HOME_LATITUDE') ||
             error.message.includes('HOME_LONGITUDE') ||
             error.message.includes('AIRCON_DEVICE_ID')) {
             return createErrorResponse(500, '設定エラー', error.message);
         }
-        
+
         // バリデーションエラー
-        if (error.message.includes('JSON解析') || 
+        if (error.message.includes('JSON解析') ||
             error.message.includes('リクエストボディ') ||
             error.message.includes('無効な座標')) {
             return createErrorResponse(400, error.message);
         }
-        
+
         // 距離計算エラー
         if (error.message.includes('距離計算') || error.message.includes('トリガー判定')) {
             return createErrorResponse(422, '位置情報処理エラー', error.message);
         }
-        
+
         // SwitchBot APIエラー
         const { statusCode, message, details } = handleSwitchBotError(error);
         return createErrorResponse(statusCode, message, details);

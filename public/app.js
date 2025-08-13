@@ -381,7 +381,7 @@ class UIController {
      */
     updateCurrentLocation(latitude, longitude) {
         if (this.elements.currentLocation) {
-            this.elements.currentLocation.textContent = 
+            this.elements.currentLocation.textContent =
                 `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
         }
     }
@@ -418,7 +418,7 @@ class UIController {
 
         // ボタンテキスト更新
         if (this.elements.toggleMonitoringBtn) {
-            this.elements.toggleMonitoringBtn.textContent = 
+            this.elements.toggleMonitoringBtn.textContent =
                 isMonitoring ? '監視停止' : '監視開始';
         }
     }
@@ -429,7 +429,7 @@ class UIController {
     updateLastControl(timestamp) {
         if (this.elements.lastControl && timestamp) {
             const date = new Date(timestamp);
-            this.elements.lastControl.textContent = 
+            this.elements.lastControl.textContent =
                 `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
         }
     }
@@ -452,14 +452,14 @@ class UIController {
 
         const logEntry = document.createElement('div');
         logEntry.className = 'log-entry';
-        
+
         const timestamp = new Date();
         const timeStr = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
-        
+
         logEntry.innerHTML = `<span class="log-time">${timeStr}</span> ${message}`;
-        
+
         this.elements.logContainer.insertBefore(logEntry, this.elements.logContainer.firstChild);
-        
+
         // 最大10件まで保持
         while (this.elements.logContainer.children.length > 10) {
             this.elements.logContainer.removeChild(this.elements.logContainer.lastChild);
@@ -477,7 +477,7 @@ class UIController {
 
         // 現在の設定値を入力フィールドに設定
         const settings = this.getSettings();
-        
+
         if (this.elements.homeLatInput) this.elements.homeLatInput.value = settings.homeLatitude || '';
         if (this.elements.homeLonInput) this.elements.homeLonInput.value = settings.homeLongitude || '';
         if (this.elements.triggerDistanceInput) this.elements.triggerDistanceInput.value = settings.triggerDistance;
@@ -509,7 +509,7 @@ class UIController {
         localStorage.setItem('switchbot-settings', JSON.stringify(settings));
         this.closeSettingsModal();
         this.addLog('設定を保存しました');
-        
+
         if (this.onSettingsSaved) {
             this.onSettingsSaved(settings);
         }
@@ -526,7 +526,7 @@ class UIController {
                 icon: '/icons/icon-192x192.svg'
             });
         }
-        
+
         // ログにも追加
         this.addLog(message);
     }
@@ -585,11 +585,11 @@ class AppController {
         this.locationMonitor = new LocationMonitor();
         this.switchBotAPI = new SwitchBotAPI();
         this.uiController = new UIController();
-        
+
         this.isInitialized = false;
         this.lastTriggerTime = 0;
         this.triggerCooldown = 60000; // 1分間のクールダウン
-        
+
         this.setupEventHandlers();
         this.initialize();
     }
@@ -629,16 +629,16 @@ class AppController {
         try {
             // 通知許可の確認
             await this.requestNotificationPermission();
-            
+
             // ログの復元
             this.uiController.loadLogsFromStorage();
-            
+
             // 接続状態確認
             await this.checkConnection();
-            
+
             this.uiController.addLog('アプリケーションを初期化しました');
             this.isInitialized = true;
-            
+
         } catch (error) {
             console.error('Initialization Error:', error);
             this.uiController.addLog(`初期化エラー: ${error.message}`);
@@ -685,7 +685,7 @@ class AppController {
      */
     startMonitoring() {
         const settings = this.uiController.getSettings();
-        
+
         if (!settings.homeLatitude || !settings.homeLongitude) {
             this.uiController.addLog('自宅の位置を設定してください');
             this.uiController.openSettingsModal();
@@ -717,7 +717,7 @@ class AppController {
         this.uiController.updateDistance(distance);
 
         const settings = this.uiController.getSettings();
-        
+
         // デバッグ情報
         if (settings.debugMode) {
             console.log('Position Update:', position, 'Distance:', distance);
@@ -734,7 +734,7 @@ class AppController {
      */
     async checkTriggerCondition(position, distance) {
         const now = Date.now();
-        
+
         // クールダウン期間チェック
         if (now - this.lastTriggerTime < this.triggerCooldown) {
             return;
@@ -766,11 +766,11 @@ class AppController {
         try {
             this.uiController.addLog('手動制御を実行中...');
             const result = await this.switchBotAPI.testAirconControl();
-            
+
             this.uiController.updateLastControl(Date.now());
             this.uiController.addLog('手動制御を実行しました');
             this.uiController.showNotification('エアコンを手動制御しました');
-            
+
         } catch (error) {
             this.uiController.addLog(`手動制御エラー: ${error.message}`);
             console.error('Manual Control Error:', error);
@@ -803,7 +803,7 @@ class AppController {
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('SwitchBot位置情報自動制御システム - 起動中...');
-    
+
     // Service Worker登録
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // メインアプリケーション起動
     window.switchBotApp = new AppController();
-    
+
     console.log('アプリケーションが正常に起動しました');
 });
 

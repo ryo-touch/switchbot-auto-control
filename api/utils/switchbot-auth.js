@@ -12,11 +12,11 @@ const { v4: uuidv4 } = require('uuid');
 function getCredentials() {
     const token = process.env.SWITCHBOT_TOKEN;
     const secret = process.env.SWITCHBOT_SECRET;
-    
+
     if (!token || !secret) {
         throw new Error('SwitchBot認証情報が設定されていません（SWITCHBOT_TOKEN, SWITCHBOT_SECRET）');
     }
-    
+
     return { token, secret };
 }
 
@@ -45,7 +45,7 @@ function createAuthHeaders() {
         const timestamp = Date.now();
         const nonce = uuidv4();
         const signature = generateSignature(token, secret, timestamp, nonce);
-        
+
         return {
             'Authorization': token,
             'sign': signature,
@@ -98,11 +98,11 @@ function getAirconDeviceId() {
 function getHomeLocation() {
     const latitude = parseFloat(process.env.HOME_LATITUDE);
     const longitude = parseFloat(process.env.HOME_LONGITUDE);
-    
+
     if (isNaN(latitude) || isNaN(longitude)) {
         throw new Error('自宅位置が正しく設定されていません（HOME_LATITUDE, HOME_LONGITUDE）');
     }
-    
+
     return { latitude, longitude };
 }
 

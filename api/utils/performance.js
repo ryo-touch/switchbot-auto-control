@@ -11,7 +11,7 @@ class SimpleCache {
         this.cache = new Map();
         this.defaultTTL = defaultTTL;
     }
-    
+
     /**
      * キャッシュに値を設定
      * @param {string} key - キー
@@ -21,13 +21,13 @@ class SimpleCache {
     set(key, value, ttl = this.defaultTTL) {
         const expiry = Date.now() + ttl;
         this.cache.set(key, { value, expiry });
-        
+
         // 古いエントリの削除（簡易GC）
         if (this.cache.size > 100) {
             this.cleanup();
         }
     }
-    
+
     /**
      * キャッシュから値を取得
      * @param {string} key - キー
@@ -38,15 +38,15 @@ class SimpleCache {
         if (!entry) {
             return null;
         }
-        
+
         if (Date.now() > entry.expiry) {
             this.cache.delete(key);
             return null;
         }
-        
+
         return entry.value;
     }
-    
+
     /**
      * 期限切れエントリを削除
      */
@@ -58,14 +58,14 @@ class SimpleCache {
             }
         }
     }
-    
+
     /**
      * キャッシュをクリア
      */
     clear() {
         this.cache.clear();
     }
-    
+
     /**
      * キャッシュサイズを取得
      */
@@ -85,25 +85,25 @@ const globalCache = new SimpleCache();
  */
 async function measureExecutionTime(fn, label = 'function') {
     const start = process.hrtime.bigint();
-    
+
     try {
         const result = await fn();
         const end = process.hrtime.bigint();
         const duration = Number(end - start) / 1000000; // ナノ秒をミリ秒に変換
-        
+
         if (process.env.DEBUG_MODE === 'true') {
             console.log(`[PERF] ${label}: ${duration.toFixed(2)}ms`);
         }
-        
+
         return result;
     } catch (error) {
         const end = process.hrtime.bigint();
         const duration = Number(end - start) / 1000000;
-        
+
         if (process.env.DEBUG_MODE === 'true') {
             console.log(`[PERF] ${label} (error): ${duration.toFixed(2)}ms`);
         }
-        
+
         throw error;
     }
 }
@@ -167,7 +167,7 @@ function shouldCompress(event, contentLength) {
     if (contentLength < 1024) {
         return false;
     }
-    
+
     // Accept-Encodingヘッダーをチェック
     const acceptEncoding = event.headers['accept-encoding'] || '';
     return acceptEncoding.includes('gzip') || acceptEncoding.includes('deflate');
@@ -190,7 +190,7 @@ function optimizeErrorResponse(baseResponse) {
             body: JSON.stringify(body)
         };
     }
-    
+
     return baseResponse;
 }
 
@@ -202,22 +202,22 @@ function optimizeErrorResponse(baseResponse) {
  */
 function optimizeResponseHeaders(headers, contentLength) {
     const optimized = { ...headers };
-    
+
     // キャッシュヘッダー
     if (!optimized['Cache-Control']) {
         optimized['Cache-Control'] = 'no-store, no-cache, must-revalidate';
     }
-    
+
     // コンテンツサイズ
     if (contentLength) {
         optimized['Content-Length'] = contentLength.toString();
     }
-    
+
     // ETags for caching (簡易版)
     if (contentLength && !optimized['ETag']) {
         optimized['ETag'] = `"${contentLength}-${Date.now()}"`;
     }
-    
+
     return optimized;
 }
 
@@ -261,11 +261,11 @@ function logPerformanceStats(context, executionTime) {
 function isDuplicateRequest(requestId, windowMs = 5000) {
     const key = `req_${requestId}`;
     const existing = globalCache.get(key);
-    
+
     if (existing) {
         return true;
     }
-    
+
     globalCache.set(key, true, windowMs);
     return false;
 }
@@ -282,7 +282,7 @@ function generateRequestId(event) {
         a = ((a << 5) - a) + b.charCodeAt(0);
         return a & a;
     }, 0);
-    
+
     return `${timestamp}_${Math.abs(hash).toString(16)}`;
 }
 
