@@ -8,8 +8,8 @@
 // ========================================
 const DEFAULT_SETTINGS = {
     triggerDistance: 100,     // トリガー距離(m)
-    updateInterval: 60,       // 位置情報取得の更新間隔(秒)
-    debugMode: false,         // デバッグモード
+    updateInterval: 10,       // 位置情報取得の更新間隔(秒)
+    debugMode: true,         // デバッグモード
     homeLatitude: null,       // 自宅緯度
     homeLongitude: null       // 自宅経度
 };
@@ -304,28 +304,60 @@ class SwitchBotAPI {
         try {
             await this.waitForRateLimit();
 
+            console.log('[DEBUG] ===== Location Check API呼び出し =====');
+            const requestData = {
+                latitude,
+                longitude,
+                timestamp: Date.now()
+            };
+            console.log('[DEBUG] Request data:', requestData);
+
             const response = await fetch(API_ENDPOINTS.locationCheck, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    latitude,
-                    longitude,
-                    timestamp: Date.now()
-                })
+                body: JSON.stringify(requestData)
+            });
+
+            console.log('[DEBUG] Location Check API Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                const errorText = await response.text();
+                console.error('[ERROR] Location Check API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText: errorText
+                });
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
             const result = await response.json();
             this.lastCallTime = Date.now();
+
+            console.log('[DEBUG] Location Check API成功:', JSON.stringify(result, null, 2));
+
+            // デバッグモードでUI上にも詳細表示
+            const settings = JSON.parse(localStorage.getItem('switchbot-settings') || '{}');
+            if (settings.debugMode) {
+                // UI上でのAPI応答表示
+                const shortResult = {
+                    triggered: result.triggered,
+                    action: result.action,
+                    message: result.message,
+                    distance: result.distance
+                };
+                console.log('[UI-DEBUG] API応答サマリー:', shortResult);
+            }
+
             return result;
 
         } catch (error) {
-            console.error('API Call Error:', error);
+            console.error('[ERROR] API Call Error:', error);
             throw this.handleAPIError(error);
         }
     }
@@ -359,7 +391,7 @@ class SwitchBotAPI {
         try {
             await this.waitForRateLimit();
 
-            const response = await fetch('/api/aircon-status', {
+            const response = await fetch('/api/aircon-state-manager', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -367,11 +399,30 @@ class SwitchBotAPI {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                const errorText = await response.text();
+                console.error('Aircon State Manager API Error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText: errorText
+                });
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
             const result = await response.json();
             this.lastCallTime = Date.now();
+
+            // 新しいAPI形式に合わせてレスポンスを変換
+            if (result.success && result.state) {
+                return {
+                    success: true,
+                    power: result.state.power,
+                    temperature: result.state.temperature,
+                    mode: result.state.mode,
+                    timestamp: result.timestamp,
+                    note: result.note
+                };
+            }
+
             return result;
 
         } catch (error) {
@@ -401,11 +452,47 @@ class SwitchBotAPI {
 
             const result = await response.json();
             this.lastCallTime = Date.now();
+
+            // エアコン制御後に状態を更新
+            if (result.success) {
+                await this.updateAirconState({
+                    power: action === 'off' ? 'off' : 'on',
+                    source: 'manual'
+                });
+            }
+
             return result;
 
         } catch (error) {
             console.error('Test Aircon Error:', error);
             throw this.handleAPIError(error);
+        }
+    }
+
+    /**
+     * エアコン状態を更新
+     */
+    async updateAirconState(stateData) {
+        try {
+            const response = await fetch('/api/aircon-state-manager', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(stateData)
+            });
+
+            if (!response.ok) {
+                console.warn('エアコン状態更新に失敗:', await response.text());
+                return false;
+            }
+
+            const result = await response.json();
+            return result.success;
+
+        } catch (error) {
+            console.warn('エアコン状態更新エラー:', error);
+            return false;
         }
     }
 
@@ -463,11 +550,17 @@ class UIController {
             toggleMonitoringBtn: document.getElementById('toggleMonitoringBtn'),
             manualOnBtn: document.getElementById('manualOnBtn'),
             manualOffBtn: document.getElementById('manualOffBtn'),
+            diagnosticBtn: document.getElementById('diagnosticBtn'),
             settingsBtn: document.getElementById('settingsBtn'),
             settingsModal: document.getElementById('settingsModal'),
+            diagnosticModal: document.getElementById('diagnosticModal'),
+            diagnosticResults: document.getElementById('diagnosticResults'),
             saveSettingsBtn: document.getElementById('saveSettingsBtn'),
             cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
             closeModalBtn: document.getElementById('closeModalBtn'),
+            closeDiagnosticBtn: document.getElementById('closeDiagnosticBtn'),
+            closeDiagnosticOkBtn: document.getElementById('closeDiagnosticOkBtn'),
+            copyDiagnosticBtn: document.getElementById('copyDiagnosticBtn'),
             clearLogBtn: document.getElementById('clearLogBtn'),
             copyAllLogsBtn: document.getElementById('copyAllLogsBtn'),
             homeLatInput: document.getElementById('homeLatitude'),
@@ -501,6 +594,13 @@ class UIController {
             });
         }
 
+        // 🔧 診断ボタン
+        if (this.elements.diagnosticBtn) {
+            this.elements.diagnosticBtn.addEventListener('click', () => {
+                this.onDiagnosticRequested && this.onDiagnosticRequested();
+            });
+        }
+
         // 設定ボタン
         if (this.elements.settingsBtn) {
             this.elements.settingsBtn.addEventListener('click', () => {
@@ -526,6 +626,25 @@ class UIController {
         if (this.elements.closeModalBtn) {
             this.elements.closeModalBtn.addEventListener('click', () => {
                 this.closeSettingsModal();
+            });
+        }
+
+        // 🔧 診断モーダル関連
+        if (this.elements.closeDiagnosticBtn) {
+            this.elements.closeDiagnosticBtn.addEventListener('click', () => {
+                this.hideDiagnosticModal();
+            });
+        }
+
+        if (this.elements.closeDiagnosticOkBtn) {
+            this.elements.closeDiagnosticOkBtn.addEventListener('click', () => {
+                this.hideDiagnosticModal();
+            });
+        }
+
+        if (this.elements.copyDiagnosticBtn) {
+            this.elements.copyDiagnosticBtn.addEventListener('click', () => {
+                this.copyDiagnosticResults();
             });
         }
 
@@ -801,10 +920,10 @@ class UIController {
                 if (timeMatch) {
                     const timeStr = timeMatch[1];
                     const message = log.substring(timeStr.length + 1); // 時刻部分と空白を除去
-                    
+
                     const logEntry = document.createElement('div');
                     logEntry.className = 'log-entry';
-                    
+
                     logEntry.innerHTML = `
                         <div class="log-content">
                             <span class="log-time">${timeStr}</span>
@@ -952,6 +1071,150 @@ class UIController {
             debugMode: localSettings.debugMode !== undefined ? localSettings.debugMode : DEFAULT_SETTINGS.debugMode
         };
     }
+
+    /**
+     * 🔧 診断モーダルを表示
+     */
+    showDiagnosticModal() {
+        if (this.elements.diagnosticModal) {
+            this.elements.diagnosticModal.style.display = 'flex';
+            // ローディング状態にリセット
+            if (this.elements.diagnosticResults) {
+                this.elements.diagnosticResults.innerHTML = `
+                    <div class="diagnostic-loading">
+                        <div class="spinner"></div>
+                        <p>診断実行中...</p>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
+     * 🔧 診断モーダルを隠す
+     */
+    hideDiagnosticModal() {
+        if (this.elements.diagnosticModal) {
+            this.elements.diagnosticModal.style.display = 'none';
+        }
+    }
+
+    /**
+     * 🔧 診断結果を表示
+     */
+    displayDiagnosticResults(data) {
+        if (!this.elements.diagnosticResults || !data.diagnostics) return;
+
+        const diagnostics = data.diagnostics;
+        const recommendations = data.recommendations || [];
+
+        const html = `
+            <div class="diagnostic-section">
+                <h4>🌐 環境変数</h4>
+                ${this.renderDiagnosticItem('Token存在', diagnostics.environment?.tokenExists)}
+                ${this.renderDiagnosticItem('Secret存在', diagnostics.environment?.secretExists)}
+                ${this.renderDiagnosticItem('デバイスID存在', diagnostics.environment?.deviceIdExists)}
+                ${this.renderDiagnosticItem('全設定完了', diagnostics.environment?.allRequired)}
+            </div>
+
+            <div class="diagnostic-section">
+                <h4>🔗 接続性</h4>
+                ${this.renderDiagnosticItem('SwitchBot API到達', diagnostics.connectivity?.reachable)}
+                ${diagnostics.connectivity?.statusCode ?
+                    `<div class="diagnostic-item">
+                        <span class="diagnostic-label">HTTPステータス:</span>
+                        <span class="diagnostic-value">${diagnostics.connectivity.statusCode}</span>
+                    </div>` : ''}
+            </div>
+
+            <div class="diagnostic-section">
+                <h4>🔐 認証</h4>
+                ${this.renderDiagnosticItem('署名生成', diagnostics.authentication?.valid)}
+                ${diagnostics.authentication?.signatureLength ?
+                    `<div class="diagnostic-item">
+                        <span class="diagnostic-label">署名長:</span>
+                        <span class="diagnostic-value">${diagnostics.authentication.signatureLength}文字</span>
+                    </div>` : ''}
+            </div>
+
+            <div class="diagnostic-section">
+                <h4>📱 デバイス状態</h4>
+                ${this.renderDiagnosticItem('HTTP応答正常', diagnostics.deviceStatus?.httpOk)}
+                ${this.renderDiagnosticItem('デバイス発見', diagnostics.deviceStatus?.deviceFound)}
+                ${diagnostics.deviceStatus?.infraredDevice ?
+                    `<div class="diagnostic-item">
+                        <span class="diagnostic-label">赤外線デバイス:</span>
+                        <span class="diagnostic-value status-info">✅ 正常（190応答）</span>
+                    </div>` :
+                    this.renderDiagnosticItem('デバイスオンライン', diagnostics.deviceStatus?.deviceOnline)
+                }
+                ${diagnostics.deviceStatus?.responseData ?
+                    `<div class="diagnostic-item">
+                        <span class="diagnostic-label">APIステータス:</span>
+                        <span class="diagnostic-value ${diagnostics.deviceStatus.responseData.statusCode === 190 ? 'status-info' : ''}">${diagnostics.deviceStatus.responseData.statusCode || 'N/A'}</span>
+                        ${diagnostics.deviceStatus.responseData.statusCode === 190 ?
+                            '<small style="display: block; color: #666; margin-top: 2px;">（赤外線デバイス正常応答）</small>' : ''}
+                    </div>` : ''}
+                ${diagnostics.deviceStatus?.note ?
+                    `<div class="diagnostic-item">
+                        <span class="diagnostic-label">備考:</span>
+                        <span class="diagnostic-value status-info">${diagnostics.deviceStatus.note}</span>
+                    </div>` : ''}
+            </div>
+
+            <div class="diagnostic-section">
+                <h4>🎯 制御コマンド</h4>
+                ${this.renderDiagnosticItem('コマンド構造正常', diagnostics.commandTest?.structureValid)}
+                ${this.renderDiagnosticItem('送信準備完了', diagnostics.commandTest?.readyToSend)}
+            </div>
+
+            ${recommendations.length > 0 ? `
+                <div class="recommendations">
+                    <h4>💡 推奨事項</h4>
+                    <ul>
+                        ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+
+            <div class="diagnostic-json">
+                <h4>📄 詳細データ (JSON)</h4>
+                <pre>${JSON.stringify(diagnostics, null, 2)}</pre>
+            </div>
+        `;
+
+        this.elements.diagnosticResults.innerHTML = html;
+    }
+
+    /**
+     * 🔧 診断項目をレンダリング
+     */
+    renderDiagnosticItem(label, value) {
+        const statusClass = value === true ? 'status-success' :
+                           value === false ? 'status-error' : 'status-warning';
+        const statusText = value === true ? '✅ OK' :
+                          value === false ? '❌ NG' : '⚠️ 不明';
+
+        return `
+            <div class="diagnostic-item">
+                <span class="diagnostic-label">${label}:</span>
+                <span class="diagnostic-status ${statusClass}">${statusText}</span>
+            </div>
+        `;
+    }
+
+    /**
+     * 🔧 診断結果をコピー
+     */
+    copyDiagnosticResults() {
+        if (!this.elements.diagnosticResults) return;
+
+        const textContent = this.elements.diagnosticResults.textContent || '';
+        const cleanText = textContent.replace(/\s+/g, ' ').trim();
+
+        this.copyToClipboard(cleanText);
+        this.showNotification('診断結果をコピーしました');
+    }
 }
 
 // ========================================
@@ -966,7 +1229,7 @@ class AppController {
         this.isInitialized = false;
         this.lastTriggerTime = 0;
         this.lastControlDistance = null; // 前回制御実行時の距離
-        this.triggerCooldown = 120000; // 2分間のクールダウンに延長
+        this.triggerCooldown = 30000; // テスト用に30秒に短縮
 
         this.setupEventHandlers();
         this.initialize();
@@ -1002,6 +1265,11 @@ class AppController {
 
         this.uiController.onSettingsSaved = (settings) => {
             this.onSettingsChanged(settings);
+        };
+
+        // 🔧 診断機能のイベントハンドラー追加
+        this.uiController.onDiagnosticRequested = () => {
+            this.runSystemDiagnostic();
         };
     }
 
@@ -1208,41 +1476,159 @@ class AppController {
         try {
             if (settings.debugMode) {
                 this.uiController.addLog(`制御判定実行中... (距離: ${Math.round(distance)}m)`);
+                console.log('[DEBUG] ===== checkTriggerCondition 開始 =====');
+                console.log('[DEBUG] 制御判定パラメータ:', {
+                    distance: Math.round(distance),
+                    triggerDistance: settings.triggerDistance,
+                    position: position,
+                    lastTriggerTime: this.lastTriggerTime,
+                    now: now,
+                    cooldownRemaining: Math.max(0, this.triggerCooldown - (now - this.lastTriggerTime))
+                });
             }
 
-            // まずエアコンの現在状態をチェック
-            const statusResult = await this.switchBotAPI.getAirconStatus();
+            // まずローカル状態管理から現在状態をチェック
+            let statusResult;
+            try {
+                console.log('[DEBUG] エアコン状態チェック開始...');
+                if (settings.debugMode) {
+                    this.uiController.addLog('🔍 エアコン状態チェック開始...');
+                }
 
-            if (settings.debugMode) {
-                this.uiController.addLog(`エアコン現在状態: ${statusResult.power}`);
+                // ローカル状態管理APIから状態を取得
+                const response = await fetch('/api/aircon-state-manager', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('[DEBUG] ローカル状態管理API応答:', {
+                    status: response.status,
+                    ok: response.ok
+                });
+
+                if (settings.debugMode) {
+                    this.uiController.addLog(`📡 ローカル状態API応答: ${response.status} (${response.ok ? 'OK' : 'NG'})`);
+                }
+
+                if (response.ok) {
+                    const localState = await response.json();
+                    console.log('[DEBUG] ローカル状態データ:', localState);
+
+                    if (settings.debugMode) {
+                        this.uiController.addLog(`📊 ローカル状態データ: power=${localState.state?.power || 'undefined'}, success=${localState.success}`);
+                    }
+
+                    if (localState.success && localState.state && localState.state.power !== 'unknown') {
+                        statusResult = { power: localState.state.power, source: 'local_state' };
+                        if (settings.debugMode) {
+                            this.uiController.addLog(`エアコン状態(ローカル): ${statusResult.power}`);
+                        }
+                        console.log('[DEBUG] ローカル状態使用:', statusResult);
+                    } else {
+                        console.log('[DEBUG] ローカル状態が不明または無効');
+                        if (settings.debugMode) {
+                            this.uiController.addLog('⚠️ ローカル状態が不明または無効');
+                        }
+                    }
+                } else {
+                    console.log('[DEBUG] ローカル状態管理API呼び出し失敗');
+                    if (settings.debugMode) {
+                        this.uiController.addLog('❌ ローカル状態管理API呼び出し失敗');
+                    }
+                }
+
+                // ローカル状態が不明または取得できない場合はSwitchBot APIから取得
+                if (!statusResult || statusResult.power === 'unknown') {
+                    console.log('[DEBUG] SwitchBot APIから状態取得を試行...');
+                    if (settings.debugMode) {
+                        this.uiController.addLog('🔄 SwitchBot APIから状態取得を試行...');
+                    }
+                    statusResult = await this.switchBotAPI.getAirconStatus();
+                    if (settings.debugMode) {
+                        this.uiController.addLog(`エアコン状態(API): ${statusResult.power}`);
+                    }
+                    console.log('[DEBUG] SwitchBot API状態:', statusResult);
+                }
+            } catch (statusError) {
+                this.uiController.addLog(`エアコン状態取得エラー: ${statusError.message}`);
+                console.error('[ERROR] Aircon Status Error:', statusError);
+                // 状態取得に失敗した場合でも、安全のため制御を実行する
+                if (settings.debugMode) {
+                    this.uiController.addLog('状態取得失敗のため制御を実行します');
+                }
             }
 
-            // エアコンがOFFの場合は何もしない
-            if (statusResult.power === 'off') {
+            // エアコンがOFFの場合は何もしない（ただし状態が不明の場合は制御を実行）
+            if (statusResult && statusResult.power === 'off') {
                 if (settings.debugMode) {
                     this.uiController.addLog('エアコンは既にOFFのため制御をスキップしました');
+                    this.uiController.addLog('⭕ 制御スキップ（既にOFF）');
                 }
+                console.log('[DEBUG] エアコンOFFのため制御スキップ');
                 return;
             }
 
-            // エアコンがONの場合のみ制御を実行
-            const result = await this.switchBotAPI.checkLocationAndControl(
-                position.latitude,
-                position.longitude
-            );
+            console.log('[DEBUG] エアコンがONまたは不明のため制御実行へ:', statusResult?.power || 'unknown');
+            if (settings.debugMode) {
+                this.uiController.addLog(`🚀 制御実行決定: エアコン状態=${statusResult?.power || 'unknown'}`);
+            }
 
-            if (result.triggered) {
-                this.lastTriggerTime = now;
-                this.lastControlDistance = distance; // 制御実行時の距離を記録
-                this.uiController.updateLastControl(now);
-                this.uiController.showNotification(`エアコンを停止しました (距離: ${Math.round(distance)}m)`);
-            } else if (settings.debugMode) {
-                this.uiController.addLog(`制御条件未満のため実行せず (距離: ${Math.round(distance)}m)`);
+            // エアコンがONまたは状態不明の場合は制御を実行
+            try {
+                console.log('[DEBUG] ===== 位置制御API呼び出し開始 =====');
+                console.log('[DEBUG] 制御実行パラメータ:', {
+                    latitude: position.latitude,
+                    longitude: position.longitude,
+                    distance: Math.round(distance),
+                    timestamp: new Date().toISOString()
+                });
+
+                if (settings.debugMode) {
+                    this.uiController.addLog(`📞 位置制御API呼び出し中... (距離: ${Math.round(distance)}m)`);
+                }
+
+                const result = await this.switchBotAPI.checkLocationAndControl(
+                    position.latitude,
+                    position.longitude
+                );
+
+                console.log('[DEBUG] 位置制御APIレスポンス:', JSON.stringify(result, null, 2));
+
+                if (settings.debugMode) {
+                    this.uiController.addLog(`📥 API応答: triggered=${result.triggered}, action=${result.action || 'none'}`);
+                }
+
+                if (result.triggered) {
+                    this.lastTriggerTime = now;
+                    this.lastControlDistance = distance; // 制御実行時の距離を記録
+                    this.uiController.updateLastControl(now);
+                    this.uiController.showNotification(`エアコンを停止しました (距離: ${Math.round(distance)}m)`);
+                    console.log('[DEBUG] 制御実行完了: triggered=true');
+                    if (settings.debugMode) {
+                        this.uiController.addLog('✅ 制御実行完了（triggered=true）');
+                    }
+                } else if (settings.debugMode) {
+                    this.uiController.addLog(`制御条件未満のため実行せず (距離: ${Math.round(distance)}m)`);
+                    this.uiController.addLog(`⚠️ 制御スキップ理由: ${result.message || 'unknown'}`);
+                    console.log('[DEBUG] 制御スキップ: triggered=false, reason:', result.message || 'unknown');
+                }
+            } catch (controlError) {
+                this.uiController.addLog(`位置制御エラー: ${controlError.message}`);
+                console.error('[ERROR] Location Control Error:', controlError);
+                return;
             }
 
         } catch (error) {
             this.uiController.addLog(`制御エラー: ${error.message}`);
-            console.error('Control Error:', error);
+            console.error('Control Error Details:', {
+                error: error.message,
+                stack: error.stack,
+                timestamp: new Date().toISOString(),
+                position: position,
+                distance: distance
+            });
         }
     }
 
@@ -1255,6 +1641,24 @@ class AppController {
             this.uiController.addLog(`手動制御(${actionText})を実行中...`);
             const result = await this.switchBotAPI.testAirconControl(action);
 
+            // 手動制御成功後、必ずローカル状態を更新
+            try {
+                await fetch('/api/aircon-state-manager', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        power: action === 'off' ? 'off' : 'on',
+                        source: 'manual_control',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                console.log(`手動制御後の状態更新完了: ${action}`);
+            } catch (updateError) {
+                console.warn('手動制御後の状態更新エラー:', updateError);
+            }
+
             this.uiController.updateLastControl(Date.now());
             this.uiController.showNotification(`エアコンを${actionText}にしました`);
 
@@ -1262,6 +1666,81 @@ class AppController {
             this.uiController.addLog(`手動制御エラー: ${error.message}`);
             console.error('Manual Control Error:', error);
         }
+    }
+
+    /**
+     * 🔧 システム診断実行
+     */
+    async runSystemDiagnostic() {
+        try {
+            console.log('[DIAGNOSTIC] 🔬 システム診断開始...');
+            this.uiController.addLog('🔬 システム診断を開始...');
+
+            // 診断モーダルを表示
+            this.uiController.showDiagnosticModal();
+
+            // 診断API呼び出し
+            const response = await fetch('/api/test-aircon', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`診断API呼び出し失敗: ${response.status}`);
+            }
+
+            const diagnosticData = await response.json();
+            console.log('[DIAGNOSTIC] 診断結果:', diagnosticData);
+
+            // 診断結果をUIに表示
+            this.uiController.displayDiagnosticResults(diagnosticData);
+            this.uiController.addLog('✅ システム診断完了');
+
+            // 重大な問題があれば通知
+            if (diagnosticData.diagnostics) {
+                const criticalIssues = this.analyzeCriticalIssues(diagnosticData.diagnostics);
+                if (criticalIssues.length > 0) {
+                    this.uiController.showNotification(`🚨 ${criticalIssues.length}個の重要な問題を検出`);
+                }
+            }
+
+        } catch (error) {
+            console.error('[DIAGNOSTIC] 診断エラー:', error);
+            this.uiController.addLog(`🚨 診断エラー: ${error.message}`);
+            this.uiController.showNotification('診断実行に失敗しました');
+            this.uiController.hideDiagnosticModal();
+        }
+    }
+
+    /**
+     * 🔧 重大な問題の分析
+     */
+    analyzeCriticalIssues(diagnostics) {
+        const issues = [];
+
+        if (!diagnostics.environment?.allRequired) {
+            issues.push('環境変数不足');
+        }
+
+        if (!diagnostics.connectivity?.reachable) {
+            issues.push('SwitchBot API接続不可');
+        }
+
+        if (!diagnostics.authentication?.valid) {
+            issues.push('認証情報無効');
+        }
+
+        if (diagnostics.deviceStatus?.responseData?.statusCode === 190) {
+            issues.push('デバイスID不正');
+        }
+
+        if (diagnostics.deviceStatus?.responseData?.statusCode === 151) {
+            issues.push('Hub2オフライン');
+        }
+
+        return issues;
     }
 
     /**

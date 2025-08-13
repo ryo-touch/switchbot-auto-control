@@ -123,11 +123,37 @@ function isDebugMode() {
     return process.env.DEBUG_MODE === 'true';
 }
 
+/**
+ * 環境変数の検証
+ * @returns {Object} 検証結果とエラー情報
+ */
+function validateEnvironment() {
+    const required = [
+        'SWITCHBOT_TOKEN',
+        'SWITCHBOT_SECRET',
+        'AIRCON_DEVICE_ID'
+    ];
+
+    const missing = [];
+
+    for (const envVar of required) {
+        if (!process.env[envVar]) {
+            missing.push(envVar);
+        }
+    }
+
+    return {
+        valid: missing.length === 0,
+        missing
+    };
+}
+
 module.exports = {
     getCredentials,
     generateSignature,
     createAuthHeaders,
     validateCredentials,
+    validateEnvironment,
     getBaseURL,
     getAirconDeviceId,
     getHomeLocation,

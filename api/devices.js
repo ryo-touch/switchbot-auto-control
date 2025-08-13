@@ -3,6 +3,7 @@
  * エンドポイント: GET /.netlify/functions/devices
  */
 
+// Netlify Functions では dotenv は不要（環境変数は自動注入される）
 const { createAuthHeaders, getBaseURL, isDebugMode } = require('./utils/switchbot-auth');
 const { createErrorResponse, createSuccessResponse, handleSwitchBotError, logError, validateHttpMethod, createCorsResponse } = require('./utils/error-handler');
 

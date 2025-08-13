@@ -177,6 +177,38 @@ body {
     background: #e6800e;
 }
 
+.btn-diagnostic {
+    background: #5ac8fa;
+    color: white;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-diagnostic:hover {
+    background: #32a8e1;
+}
+
+.btn-diagnostic:active {
+    background: #007aff;
+    transform: translateY(1px);
+}
+
+.btn-diagnostic::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.btn-diagnostic:hover::before {
+    left: 100%;
+}
+
 .btn-outline {
     background: transparent;
     color: #007AFF;
@@ -533,6 +565,201 @@ body {
     .setting-item input[type="number"] {
         background: #2c2c2e;
         border-color: #3a3a3c;
+        color: #ffffff;
+    }
+}
+
+/* 🔧 Diagnostic Modal Styles */
+.diagnostic-modal {
+    max-width: 90%;
+    max-height: 90vh;
+}
+
+.diagnostic-loading {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #5ac8fa;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.diagnostic-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border-left: 4px solid #5ac8fa;
+}
+
+.diagnostic-section h4 {
+    margin-bottom: 12px;
+    color: #007aff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.diagnostic-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px 0;
+}
+
+.diagnostic-item:last-child {
+    margin-bottom: 0;
+}
+
+.diagnostic-label {
+    font-weight: 500;
+    color: #333;
+}
+
+.diagnostic-value {
+    font-family: 'SF Mono', Consolas, 'Monaco', monospace;
+    font-size: 13px;
+    padding: 4px 8px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.diagnostic-status {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-success {
+    background: #e8f5e8;
+    color: #2d7d2d;
+}
+
+.status-info {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.status-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.recommendations {
+    margin-top: 24px;
+    padding: 16px;
+    background: #fff3cd;
+    border-radius: 12px;
+    border-left: 4px solid #ffc107;
+}
+
+.recommendations h4 {
+    margin-bottom: 12px;
+    color: #856404;
+    font-size: 16px;
+}
+
+.recommendations ul {
+    list-style: none;
+    padding: 0;
+}
+
+.recommendations li {
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+}
+
+.recommendations li::before {
+    content: '⚠️';
+    position: absolute;
+    left: 0;
+}
+
+.diagnostic-json {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+    overflow-x: auto;
+}
+
+.diagnostic-json pre {
+    margin: 0;
+    font-family: 'SF Mono', Consolas, 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Dark mode support for diagnostic modal */
+@media (prefers-color-scheme: dark) {
+    .diagnostic-section {
+        background: #2c2c2e;
+        border-left-color: #5ac8fa;
+    }
+
+    .diagnostic-value {
+        background: #3a3a3c;
+        border-color: #48484a;
+        color: #ffffff;
+    }
+
+    .diagnostic-label {
+        color: #ffffff;
+    }
+
+    .status-success {
+        background: #1e4d1e;
+        color: #7dd87d;
+    }
+
+    .status-warning {
+        background: #4d3d1a;
+        color: #ffcc7d;
+    }
+
+    .status-error {
+        background: #4d1e1e;
+        color: #ff7d7d;
+    }
+
+    .recommendations {
+        background: #4d3d1a;
+        border-left-color: #ffc107;
+    }
+
+    .recommendations h4 {
+        color: #ffcc7d;
+    }
+
+    .diagnostic-json {
+        background: #2c2c2e;
+        border-color: #48484a;
+    }
+
+    .diagnostic-json pre {
         color: #ffffff;
     }
 }

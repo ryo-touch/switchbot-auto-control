@@ -70,7 +70,37 @@ async function testDevicesAPI() {
 }
 
 /**
- * エアコン手動制御APIテスト
+ * エアコン状態管理APIテスト
+ */
+async function testAirconStateManagerAPI() {
+    try {
+        const { handler } = require('./aircon-state-manager');
+
+        // GET テスト（状態取得）
+        const getEvent = createMockEvent('GET', 'aircon-state-manager');
+        const context = {};
+
+        const getResponse = await handler(getEvent, context);
+        logTestResult('Aircon State Manager API (GET)', getResponse);
+
+        // POST テスト（状態更新）
+        const postEvent = createMockEvent('POST', 'aircon-state-manager', {
+            power: 'off',
+            source: 'test'
+        });
+
+        const postResponse = await handler(postEvent, context);
+        logTestResult('Aircon State Manager API (POST)', postResponse);
+
+        return getResponse.statusCode === 200 && postResponse.statusCode === 200;
+    } catch (error) {
+        console.error('Aircon State Manager API Test Failed:', error.message);
+        return false;
+    }
+}
+
+/**
+ * エアコン状態取得APIテスト
  */
 async function testAirconAPI() {
     try {
@@ -180,6 +210,7 @@ async function runAllTests() {
     const tests = [
         { name: 'CORS', fn: testCORS },
         { name: 'Devices API', fn: testDevicesAPI },
+        { name: 'Aircon State Manager API', fn: testAirconStateManagerAPI },
         { name: 'Test Aircon API', fn: testAirconAPI },
         { name: 'Location Check API', fn: testLocationCheckAPI },
         { name: 'Error Handling', fn: testErrorHandling }
@@ -236,6 +267,7 @@ if (require.main === module) {
 module.exports = {
     createMockEvent,
     testDevicesAPI,
+    testAirconStateManagerAPI,
     testAirconAPI,
     testLocationCheckAPI,
     testErrorHandling,

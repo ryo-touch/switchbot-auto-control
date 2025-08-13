@@ -72,6 +72,9 @@
                     <button id="manualOffBtn" class="btn btn-warning">
                         エアコンOFF
                     </button>
+                    <button id="diagnosticBtn" class="btn btn-diagnostic">
+                        🔬 診断実行
+                    </button>
                     <button id="settingsBtn" class="btn btn-outline">
                         ⚙️ 設定
                     </button>
@@ -123,6 +126,28 @@
                 <div class="modal-footer">
                     <button id="saveSettingsBtn" class="btn btn-primary">保存</button>
                     <button id="cancelSettingsBtn" class="btn btn-outline">キャンセル</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔧 Diagnostic Modal -->
+        <div class="modal" id="diagnosticModal">
+            <div class="modal-content diagnostic-modal">
+                <div class="modal-header">
+                    <h3>🔬 システム診断結果</h3>
+                    <button class="modal-close" id="closeDiagnosticBtn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="diagnosticResults">
+                        <div class="diagnostic-loading">
+                            <div class="spinner"></div>
+                            <p>診断実行中...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="copyDiagnosticBtn" class="btn btn-secondary">結果をコピー</button>
+                    <button id="closeDiagnosticOkBtn" class="btn btn-primary">閉じる</button>
                 </div>
             </div>
         </div>
