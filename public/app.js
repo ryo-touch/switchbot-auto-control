@@ -633,8 +633,8 @@ class UIController {
 
         this.elements.logContainer.insertBefore(logEntry, this.elements.logContainer.firstChild);
 
-        // 最大10件まで保持
-        while (this.elements.logContainer.children.length > 10) {
+        // 最大30件まで保持
+        while (this.elements.logContainer.children.length > 30) {
             this.elements.logContainer.removeChild(this.elements.logContainer.lastChild);
         }
 
@@ -1055,8 +1055,7 @@ class AppController {
                 this.lastTriggerTime = now;
                 this.lastControlDistance = distance; // 制御実行時の距離を記録
                 this.uiController.updateLastControl(now);
-                this.uiController.addLog(`エアコンを停止しました (距離: ${Math.round(distance)}m)`);
-                this.uiController.showNotification(result.message || 'エアコンを制御しました');
+                this.uiController.showNotification(`エアコンを停止しました (距離: ${Math.round(distance)}m)`);
             } else if (settings.debugMode) {
                 this.uiController.addLog(`制御条件未満のため実行せず (距離: ${Math.round(distance)}m)`);
             }
@@ -1077,7 +1076,6 @@ class AppController {
             const result = await this.switchBotAPI.testAirconControl(action);
 
             this.uiController.updateLastControl(Date.now());
-            this.uiController.addLog(`エアコンを${actionText}にしました`);
             this.uiController.showNotification(`エアコンを${actionText}にしました`);
 
         } catch (error) {
