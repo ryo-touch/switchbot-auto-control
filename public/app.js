@@ -249,7 +249,7 @@ class LocationMonitor {
         const savedSettings = localStorage.getItem('switchbot-settings');
         const localSettings = savedSettings ? JSON.parse(savedSettings) : {};
 
-        // サーバー設定を優先してマージ
+        // サーバー設定を優先してマージ（デバッグモードはユーザー設定を優先）
         return {
             ...DEFAULT_SETTINGS,
             ...localSettings,
@@ -257,7 +257,8 @@ class LocationMonitor {
             homeLatitude: DEFAULT_SETTINGS.homeLatitude,
             homeLongitude: DEFAULT_SETTINGS.homeLongitude,
             triggerDistance: DEFAULT_SETTINGS.triggerDistance,
-            debugMode: DEFAULT_SETTINGS.debugMode
+            // debugModeはユーザー設定を優先（ローカル設定がない場合のみデフォルト値を使用）
+            debugMode: localSettings.debugMode !== undefined ? localSettings.debugMode : DEFAULT_SETTINGS.debugMode
         };
     }
 }
@@ -772,7 +773,19 @@ class UIController {
      */
     getSettings() {
         const savedSettings = localStorage.getItem('switchbot-settings');
-        return savedSettings ? JSON.parse(savedSettings) : DEFAULT_SETTINGS;
+        const localSettings = savedSettings ? JSON.parse(savedSettings) : {};
+
+        // サーバー設定とマージ（デバッグモードはユーザー設定を優先）
+        return {
+            ...DEFAULT_SETTINGS,
+            ...localSettings,
+            // サーバー管理項目は上書き
+            homeLatitude: DEFAULT_SETTINGS.homeLatitude,
+            homeLongitude: DEFAULT_SETTINGS.homeLongitude,
+            triggerDistance: DEFAULT_SETTINGS.triggerDistance,
+            // debugModeはユーザー設定を優先
+            debugMode: localSettings.debugMode !== undefined ? localSettings.debugMode : DEFAULT_SETTINGS.debugMode
+        };
     }
 }
 
