@@ -286,10 +286,27 @@ function generateRequestId(event) {
     return `${timestamp}_${Math.abs(hash).toString(16)}`;
 }
 
+/**
+ * パフォーマンス測定（関数実行後）
+ * @param {string} operation - 操作名
+ * @param {number} startTime - 開始時刻（Date.now()）
+ */
+function measurePerformance(operation, startTime) {
+    const duration = Date.now() - startTime;
+
+    if (process.env.DEBUG_MODE === 'true') {
+        console.log(`[PERF] ${operation}: ${duration}ms`);
+    }
+
+    // パフォーマンス統計に記録
+    logPerformanceStats(operation, duration);
+}
+
 module.exports = {
     SimpleCache,
     globalCache,
     measureExecutionTime,
+    measurePerformance,
     cacheSwitchBotResponse,
     getCachedSwitchBotResponse,
     cacheDistanceCalculation,
