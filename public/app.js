@@ -8,7 +8,7 @@
 // ========================================
 const DEFAULT_SETTINGS = {
     triggerDistance: 100,     // トリガー距離(m)
-    updateInterval: 10,       // 更新間隔(秒)
+    updateInterval: 30,       // 更新間隔(秒) - 頻度を下げる
     debugMode: false,         // デバッグモード
     homeLatitude: null,       // 自宅緯度
     homeLongitude: null       // 自宅経度
@@ -27,9 +27,11 @@ const API_ENDPOINTS = {
 class LocationMonitor {
     constructor() {
         this.watchId = null;
+        this.pollingTimer = null; // ポーリング用タイマー追加
         this.isMonitoring = false;
         this.currentPosition = null;
         this.lastDistance = null;
+        this.lastControlDistance = null; // 前回制御時の距離を記録
         this.onPositionUpdate = null;
         this.onError = null;
         this.onStatusUpdate = null; // ステータス更新コールバック追加
@@ -47,8 +49,8 @@ class LocationMonitor {
         // まず一度だけ位置情報を取得して権限を確認
         this.requestInitialPosition()
             .then(() => {
-                // 権限が取得できたら継続監視を開始
-                this.startContinuousMonitoring();
+                // 権限が取得できたら定期ポーリングを開始
+                this.startPeriodicMonitoring();
             })
             .catch((error) => {
                 this.handlePositionError(error);
@@ -104,33 +106,54 @@ class LocationMonitor {
     }
 
     /**
-     * 継続的な位置情報監視を開始
+     * 定期的な位置情報監視を開始（ポーリング方式）
      */
-    startContinuousMonitoring() {
+    startPeriodicMonitoring() {
+        const settings = this.getSettings();
+        const intervalMs = settings.updateInterval * 1000; // 秒をミリ秒に変換
+
+        // 定期的に位置情報を取得
+        this.pollingTimer = setInterval(() => {
+            this.getCurrentPosition();
+        }, intervalMs);
+
+        this.isMonitoring = true;
+        console.log(`定期的な位置情報監視を開始しました (間隔: ${settings.updateInterval}秒)`);
+    }
+
+    /**
+     * 現在位置を取得（ポーリング用）
+     */
+    getCurrentPosition() {
         const options = {
             enableHighAccuracy: true,
-            timeout: 20000, // iOSに配慮して長めに設定
+            timeout: 15000,
             maximumAge: 60000
         };
 
-        this.watchId = navigator.geolocation.watchPosition(
+        navigator.geolocation.getCurrentPosition(
             (position) => this.handlePositionUpdate(position),
             (error) => this.handlePositionError(error),
             options
         );
-
-        this.isMonitoring = true;
-        console.log('継続的な位置情報監視を開始しました');
     }
 
     /**
      * 位置情報監視を停止
      */
     stopMonitoring() {
+        // watchPositionのクリア
         if (this.watchId !== null) {
             navigator.geolocation.clearWatch(this.watchId);
             this.watchId = null;
         }
+
+        // ポーリングタイマーのクリア
+        if (this.pollingTimer !== null) {
+            clearInterval(this.pollingTimer);
+            this.pollingTimer = null;
+        }
+
         this.isMonitoring = false;
         console.log('位置情報監視を停止しました');
     }
@@ -762,7 +785,8 @@ class AppController {
 
         this.isInitialized = false;
         this.lastTriggerTime = 0;
-        this.triggerCooldown = 60000; // 1分間のクールダウン
+        this.lastControlDistance = null; // 前回制御実行時の距離
+        this.triggerCooldown = 120000; // 2分間のクールダウンに延長
 
         this.setupEventHandlers();
         this.initialize();
@@ -961,14 +985,17 @@ class AppController {
 
         const settings = this.uiController.getSettings();
 
-        // デバッグ情報
+        // デバッグ情報（制御実行時のみ詳細表示）
         if (settings.debugMode) {
-            console.log('Position Update:', position, 'Distance:', distance);
+            const now = new Date().toLocaleTimeString();
+            console.log(`[${now}] 位置更新: 距離=${distance?.toFixed(1) || 'N/A'}m`);
         }
 
         // トリガー距離チェック
         if (distance && distance > settings.triggerDistance) {
             await this.checkTriggerCondition(position, distance);
+        } else if (settings.debugMode && distance) {
+            console.log(`トリガー距離内のため制御なし: ${distance.toFixed(1)}m (閾値: ${settings.triggerDistance}m)`);
         }
     }
 
@@ -977,13 +1004,33 @@ class AppController {
      */
     async checkTriggerCondition(position, distance) {
         const now = Date.now();
+        const settings = this.uiController.getSettings();
 
         // クールダウン期間チェック
         if (now - this.lastTriggerTime < this.triggerCooldown) {
+            if (settings.debugMode) {
+                const remainingTime = Math.round((this.triggerCooldown - (now - this.lastTriggerTime)) / 1000);
+                console.log(`クールダウン中: あと${remainingTime}秒`);
+            }
             return;
         }
 
+        // 距離に大きな変化がない場合はスキップ（重複制御防止）
+        if (this.lastControlDistance !== null) {
+            const distanceDiff = Math.abs(distance - this.lastControlDistance);
+            if (distanceDiff < 10) { // 10m未満の変化はスキップ
+                if (settings.debugMode) {
+                    console.log(`距離変化が少ないためスキップ: ${distanceDiff.toFixed(1)}m`);
+                }
+                return;
+            }
+        }
+
         try {
+            if (settings.debugMode) {
+                this.uiController.addLog(`制御判定実行中... (距離: ${Math.round(distance)}m)`);
+            }
+
             const result = await this.switchBotAPI.checkLocationAndControl(
                 position.latitude,
                 position.longitude
@@ -991,9 +1038,12 @@ class AppController {
 
             if (result.triggered) {
                 this.lastTriggerTime = now;
+                this.lastControlDistance = distance; // 制御実行時の距離を記録
                 this.uiController.updateLastControl(now);
                 this.uiController.addLog(`エアコンを停止しました (距離: ${Math.round(distance)}m)`);
                 this.uiController.showNotification(result.message || 'エアコンを制御しました');
+            } else if (settings.debugMode) {
+                this.uiController.addLog(`制御条件未満のため実行せず (距離: ${Math.round(distance)}m)`);
             }
 
         } catch (error) {
