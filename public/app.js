@@ -222,7 +222,7 @@ class SwitchBotAPI {
     /**
      * エアコン手動制御
      */
-    async testAirconControl() {
+    async testAirconControl(action = 'off') {
         try {
             await this.waitForRateLimit();
 
@@ -230,7 +230,8 @@ class SwitchBotAPI {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({ action })
             });
 
             if (!response.ok) {
@@ -299,7 +300,8 @@ class UIController {
             statusText: document.getElementById('statusText'),
             logContainer: document.getElementById('logContainer'),
             toggleMonitoringBtn: document.getElementById('toggleMonitoringBtn'),
-            manualControlBtn: document.getElementById('manualControlBtn'),
+            manualOnBtn: document.getElementById('manualOnBtn'),
+            manualOffBtn: document.getElementById('manualOffBtn'),
             settingsBtn: document.getElementById('settingsBtn'),
             settingsModal: document.getElementById('settingsModal'),
             saveSettingsBtn: document.getElementById('saveSettingsBtn'),
@@ -325,9 +327,15 @@ class UIController {
         }
 
         // 手動制御ボタン
-        if (this.elements.manualControlBtn) {
-            this.elements.manualControlBtn.addEventListener('click', () => {
-                this.onManualControl && this.onManualControl();
+        if (this.elements.manualOnBtn) {
+            this.elements.manualOnBtn.addEventListener('click', () => {
+                this.onManualControl && this.onManualControl('on');
+            });
+        }
+
+        if (this.elements.manualOffBtn) {
+            this.elements.manualOffBtn.addEventListener('click', () => {
+                this.onManualControl && this.onManualControl('off');
             });
         }
 
@@ -762,14 +770,15 @@ class AppController {
     /**
      * 手動制御
      */
-    async manualControl() {
+    async manualControl(action = 'off') {
         try {
-            this.uiController.addLog('手動制御を実行中...');
-            const result = await this.switchBotAPI.testAirconControl();
+            const actionText = action === 'on' ? 'ON' : 'OFF';
+            this.uiController.addLog(`手動制御(${actionText})を実行中...`);
+            const result = await this.switchBotAPI.testAirconControl(action);
 
             this.uiController.updateLastControl(Date.now());
-            this.uiController.addLog('手動制御を実行しました');
-            this.uiController.showNotification('エアコンを手動制御しました');
+            this.uiController.addLog(`エアコンを${actionText}にしました`);
+            this.uiController.showNotification(`エアコンを${actionText}にしました`);
 
         } catch (error) {
             this.uiController.addLog(`手動制御エラー: ${error.message}`);
