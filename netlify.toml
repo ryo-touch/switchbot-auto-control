@@ -28,6 +28,23 @@
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
 
+# メインアプリのセキュリティヘッダー（位置情報対応）
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Permissions-Policy = "geolocation=(self)"
+
+# HTTPSリダイレクト強制
+[[redirects]]
+  from = "http://ryo-touch-switchbot-app.netlify.app/*"
+  to = "https://ryo-touch-switchbot-app.netlify.app/:splat"
+  status = 301
+  force = true
+
 # PWA ファイルのキャッシュ設定
 [[headers]]
   for = "/manifest.json"

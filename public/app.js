@@ -32,6 +32,7 @@ class LocationMonitor {
         this.lastDistance = null;
         this.onPositionUpdate = null;
         this.onError = null;
+        this.onStatusUpdate = null; // ステータス更新コールバック追加
     }
 
     /**
@@ -43,9 +44,72 @@ class LocationMonitor {
             return false;
         }
 
+        // まず一度だけ位置情報を取得して権限を確認
+        this.requestInitialPosition()
+            .then(() => {
+                // 権限が取得できたら継続監視を開始
+                this.startContinuousMonitoring();
+            })
+            .catch((error) => {
+                this.handlePositionError(error);
+            });
+
+        return true;
+    }
+
+    /**
+     * 初回位置情報取得（権限確認用）
+     */
+    requestInitialPosition() {
+        return new Promise((resolve, reject) => {
+            // UI状態更新
+            if (this.onStatusUpdate) {
+                this.onStatusUpdate('requesting');
+            }
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 30000, // iOSでは長めに設定
+                maximumAge: 300000 // 5分間キャッシュを許可
+            };
+
+            // UI状態更新（取得開始）
+            if (this.onStatusUpdate) {
+                this.onStatusUpdate('acquiring');
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    console.log('初回位置情報取得成功');
+                    this.handlePositionUpdate(position);
+                    resolve(position);
+                },
+                (error) => {
+                    console.error('初回位置情報取得失敗:', error);
+                    // エラー種別に応じてUI更新
+                    if (this.onStatusUpdate) {
+                        if (error.code === error.PERMISSION_DENIED) {
+                            this.onStatusUpdate('denied');
+                        } else if (error.code === error.TIMEOUT) {
+                            this.onStatusUpdate('timeout');
+                        } else {
+                            this.onStatusUpdate('error');
+                        }
+                    }
+                    reject(error);
+                },
+                options
+            );
+        });
+    }
+
+    /**
+     * 継続的な位置情報監視を開始
+     */
+    startContinuousMonitoring() {
         const options = {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 20000, // iOSに配慮して長めに設定
             maximumAge: 60000
         };
 
@@ -56,8 +120,7 @@ class LocationMonitor {
         );
 
         this.isMonitoring = true;
-        console.log('位置情報監視を開始しました');
-        return true;
+        console.log('継続的な位置情報監視を開始しました');
     }
 
     /**
@@ -103,20 +166,28 @@ class LocationMonitor {
      */
     handlePositionError(error) {
         let message = '';
+        let userMessage = '';
+
         switch (error.code) {
             case error.PERMISSION_DENIED:
-                message = '位置情報の許可が必要です';
+                message = '位置情報の許可が拒否されました';
+                userMessage = 'iPhoneの設定 > プライバシーとセキュリティ > 位置情報サービス で位置情報を有効にし、Safariでの位置情報アクセスを許可してください。';
                 break;
             case error.POSITION_UNAVAILABLE:
                 message = '位置情報を取得できません';
+                userMessage = 'GPS信号が弱い可能性があります。屋外に移動するか、しばらく待ってから再試行してください。';
                 break;
             case error.TIMEOUT:
                 message = '位置情報の取得がタイムアウトしました';
+                userMessage = 'GPS信号の取得に時間がかかっています。しばらく待ってから再試行してください。';
                 break;
             default:
                 message = '位置情報の取得中にエラーが発生しました';
+                userMessage = '位置情報の取得に失敗しました。しばらく待ってから再試行してください。';
         }
-        this.handleError(message);
+
+        console.error('Geolocation Error:', error);
+        this.handleError(`${message} (${userMessage})`);
     }
 
     /**
@@ -429,6 +500,36 @@ class UIController {
         if (this.elements.currentLocation) {
             this.elements.currentLocation.textContent =
                 `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+            // 位置情報取得成功ログ
+            console.log('位置情報更新:', { latitude, longitude, timestamp: new Date().toLocaleTimeString() });
+        }
+    }
+
+    /**
+     * 位置情報取得状態の更新
+     */
+    updateLocationStatus(status) {
+        if (this.elements.currentLocation) {
+            switch (status) {
+                case 'requesting':
+                    this.elements.currentLocation.textContent = '📍 位置情報を要求中...';
+                    break;
+                case 'acquiring':
+                    this.elements.currentLocation.textContent = '🔍 位置情報を取得中...';
+                    break;
+                case 'timeout':
+                    this.elements.currentLocation.textContent = '⏰ 取得タイムアウト';
+                    break;
+                case 'denied':
+                    this.elements.currentLocation.textContent = '❌ アクセス拒否';
+                    break;
+                case 'error':
+                    this.elements.currentLocation.textContent = '❌ 取得エラー';
+                    break;
+                default:
+                    this.elements.currentLocation.textContent = '取得中...';
+            }
         }
     }
 
@@ -681,6 +782,11 @@ class AppController {
             this.handleLocationError(error);
         };
 
+        // 位置情報ステータス更新時
+        this.locationMonitor.onStatusUpdate = (status) => {
+            this.uiController.updateLocationStatus(status);
+        };
+
         // UI イベント
         this.uiController.onToggleMonitoring = () => {
             this.toggleMonitoring();
@@ -700,6 +806,26 @@ class AppController {
      */
     async initialize() {
         try {
+            // HTTPSチェック（本番環境のみ）
+            if (location.hostname !== 'localhost' && location.protocol !== 'https:') {
+                this.uiController.addLog('⚠️ HTTPSが必要です。位置情報は取得できません。');
+                this.uiController.showNotification('HTTPSが必要です', 'error');
+                return;
+            }
+
+            // iOSデバイス検出
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            if (isIOS) {
+                this.uiController.addLog('📱 iOSデバイスを検出しました');
+                // iOSでの位置情報説明を表示
+                this.showIOSLocationInstructions();
+            }
+
+            // 位置情報サポートチェック
+            if (!navigator.geolocation) {
+                throw new Error('このブラウザは位置情報をサポートしていません');
+            }
+
             // 通知許可の確認
             await this.requestNotificationPermission();
 
@@ -712,13 +838,29 @@ class AppController {
             // 接続状態確認
             await this.checkConnection();
 
-            this.uiController.addLog('アプリケーションを初期化しました');
+            this.uiController.addLog('✅ アプリケーションを初期化しました');
             this.isInitialized = true;
 
         } catch (error) {
             console.error('Initialization Error:', error);
-            this.uiController.addLog(`初期化エラー: ${error.message}`);
+            this.uiController.addLog(`❌ 初期化エラー: ${error.message}`);
         }
+    }
+
+    /**
+     * iOS向けの位置情報説明を表示
+     */
+    showIOSLocationInstructions() {
+        const instructions = [
+            '📍 iPhoneで位置情報を使用するには：',
+            '1. 設定 > プライバシーとセキュリティ > 位置情報サービス をオンにする',
+            '2. Safari の位置情報アクセスを許可する',
+            '3. ブラウザで「位置情報の共有を許可」を選択する'
+        ];
+
+        instructions.forEach(instruction => {
+            this.uiController.addLog(instruction);
+        });
     }
 
     /**
